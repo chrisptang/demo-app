@@ -15,11 +15,11 @@ String appPort = '7505'
 
 //可选项，如果没有特殊需求，可注释掉
 @Field
-String JvmOptsProd='-Xmx1g -Xms1g'
+String JvmOptsProd='-Xmx256m -Xms256m'
 
 //可选项，如果没有特殊需求，可注释掉
 @Field
 String JvmOptsFat='-Xmx256m -Xms256m'
 
 //这一行之后不要动：
-leqeeAdCiJava(this)
+javaPipeline(this)
