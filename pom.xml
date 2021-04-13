@@ -2,22 +2,21 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <packaging>pom</packaging>
     <modules>
         <module>controller</module>
         <module>client</module>
     </modules>
+    <packaging>pom</packaging>
 
     <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.4.4</version>
-        <relativePath/> <!-- lookup parent from repository -->
+        <groupId>com.miniso.boot</groupId>
+        <artifactId>boot-infra</artifactId>
+        <version>1.3.0-SNAPSHOT</version>
     </parent>
 
     <groupId>com.miniso.ecomm</groupId>
     <artifactId>demo-boot-app</artifactId>
-    <version>1.1.0-SNAPSHOT</version>
+    <version>1.0.0-SNAPSHOT</version>
     <name>demo-boot-app</name>
     <description>core business logic processor, provide service using dubbo.</description>
 
@@ -46,6 +45,10 @@
             <artifactId>lombok</artifactId>
             <optional>true</optional>
             <version>1.18.12</version>
+        </dependency>
+        <dependency>
+            <groupId>com.miniso.boot</groupId>
+            <artifactId>miniso-boot-autoconfiguration</artifactId>
         </dependency>
     </dependencies>
 
