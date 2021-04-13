@@ -3,7 +3,7 @@ import groovy.transform.Field
 
 //应用名字；
 @Field
-String appName = 'boot-demo-app'
+String appName = 'demo-boot-app'
 
 //spring boot应用的可执行jar包模块名；
 @Field
