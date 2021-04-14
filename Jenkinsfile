@@ -21,5 +21,9 @@ String JvmOptsProd='-Xmx256m -Xms256m'
 @Field
 String JvmOptsFat='-Xmx256m -Xms256m'
 
+//可选项，用于发送Jenkins发布通知；
+@Field
+String JenkinsNotificationBotUrl='https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=3660afa3-e9da-4df6-864d-a316d05ad188&from=jenkinsfile'
+
 //这一行之后不要动：
 javaPipeline(this)
