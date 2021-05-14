@@ -25,5 +25,4 @@ public class DemoController {
         model.put("requestQuery", request.getQueryString());
         return new ModelAndView("demo", model);
     }
-
 }
