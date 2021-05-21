@@ -27,12 +27,6 @@
         </dependency>
 
         <dependency>
-            <groupId>com.amazon.sellingpartnerapi</groupId>
-            <artifactId>sellingpartnerapi-aa-java</artifactId>
-            <version>1.0</version>
-        </dependency>
-
-        <dependency>
             <groupId>io.swagger</groupId>
             <artifactId>swagger-java-client</artifactId>
             <version>1.0.0</version>
@@ -76,11 +70,6 @@
         <dependency>
             <groupId>com.miniso.boot</groupId>
             <artifactId>miniso-boot-autoconfiguration</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-core</artifactId>
-            <version>1.11.534</version>
         </dependency>
     </dependencies>
 
