@@ -9,7 +9,7 @@
         <relativePath>../pom.xml</relativePath> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.miniso.ecomm</groupId>
-    <artifactId>controller</artifactId>
+    <artifactId>demo-app-controller</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>controller</name>
     <description>Demo project for Spring Boot</description>
