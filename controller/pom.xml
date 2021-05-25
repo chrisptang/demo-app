@@ -66,11 +66,6 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-
-        <dependency>
-            <groupId>com.miniso.boot</groupId>
-            <artifactId>miniso-boot-autoconfiguration</artifactId>
-        </dependency>
     </dependencies>
 
     <build>
