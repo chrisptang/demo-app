@@ -52,6 +52,14 @@
             <groupId>com.miniso.boot</groupId>
             <artifactId>miniso-boot-autoconfiguration</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.miniso.boot</groupId>
+            <artifactId>miniso-boot-apollo-autoconfiguration</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.miniso.boot</groupId>
+            <artifactId>miniso-boot-xxl-job-autoconfiguration</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
