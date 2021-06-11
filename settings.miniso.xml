@@ -41,7 +41,7 @@
                 <repository>
                     <id>public</id>
                     <name>public</name>
-                    <url>http://13.76.250.64:8081/repository/public/</url>
+                    <url>https://repo.minisobos.com/repository/public/</url>
                     <snapshots>
                         <enabled>true</enabled>
                         <updatePolicy>always</updatePolicy>
