@@ -11,3 +11,4 @@ infra.code-workspace
 .env
 data/
 */target/*
+config-cache/*

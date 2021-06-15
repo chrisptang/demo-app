@@ -10,7 +10,7 @@ import java.util.Date;
 public class DemoScheduler {
 
     @XxlJob("demoScheduler")
-    public ReturnT handleXxlJob() {
+    public ReturnT handleXxlJob(String param) {
         return new ReturnT(200, "finished at:" + new Date());
     }
 }
