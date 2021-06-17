@@ -1,6 +1,7 @@
 package com.miniso.ecomm.bootdemoapp;
 
 import com.miniso.boot.autoconfiguration.annotation.EnableCat;
+import com.miniso.boot.autoconfiguration.annotation.EnableMinisoDubbo;
 import com.miniso.boot.autoconfiguration.apollo.EnableApollo;
 import com.miniso.boot.autoconfiguration.xxljob.annotation.EnableXxlJob;
 import org.springframework.boot.SpringApplication;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 @EnableCat
 @EnableApollo
 @EnableXxlJob
+@EnableMinisoDubbo
 public class BootDemoAppApplication {
 
     public static void main(String[] args) {
