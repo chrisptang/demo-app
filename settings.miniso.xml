@@ -47,6 +47,23 @@
                         <updatePolicy>always</updatePolicy>
                     </snapshots>
                 </repository>
+                <repository>
+                    <id>releases</id>
+                    <name>releases</name>
+                    <url>https://repo.minisobos.com/repository/releases/</url>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                </repository>
+                <repository>
+                    <id>snapshots</id>
+                    <name>snapshots</name>
+                    <url>https://repo.minisobos.com/repository/snapshots/</url>
+                    <snapshots>
+                        <enabled>true</enabled>
+                        <updatePolicy>always</updatePolicy>
+                    </snapshots>
+                </repository>
             </repositories>
         </profile>
     </profiles>
