@@ -35,6 +35,14 @@
         </layout>
     </appender>
 
+    <appender name="MINISO-APPENDER" class="com.miniso.ecomm.logservice.client.MinisoLogServiceAppender">
+        <encoder>
+            <Pattern>
+                %d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n
+            </Pattern>
+        </encoder>
+    </appender>
+
     <logger name="com.miniso" level="debug" additivity="false">
         <appender-ref ref="FILE-ROLLING"/>
     </logger>
@@ -42,6 +50,7 @@
     <root level="info">
         <appender-ref ref="FILE-ROLLING"/>
         <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="MINISO-APPENDER"/>
     </root>
 
 </configuration>
