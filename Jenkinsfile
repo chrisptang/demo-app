@@ -26,4 +26,5 @@ String JvmOptsFat='-Xmx256m -Xms256m'
 //String JenkinsNotificationBotUrl='https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=f9743577-b399-4989-acd8-516400860292&from=jenkinsfile'
 
 //这一行之后不要动：
-javaPipeline(this)
+// javaPipeline(this)
+javaPipelineWithJunit(this)
