@@ -1,6 +1,7 @@
 package com.miniso.ecomm.bootdemoapp.contoller;
 
 import com.miniso.ecomm.apigateway.client.services.lazada.LazadaOrderService;
+import com.miniso.ecomm.bootdemoapp.schedule.FetchOrderItemsTask;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -24,10 +25,14 @@ public class DemoController {
     @DubboReference
     private LazadaOrderService lazadaOrderService;
 
+    @Autowired
+    private FetchOrderItemsTask fetchOrderItemsTask;
+
     @GetMapping("/index")
     public ModelAndView index() {
         Map<String, Object> model = new HashMap<>();
         model.put("now", new Date());
+        model.put("fetch", fetchOrderItemsTask.fetchTokopedia(null));
         model.put("requestQuery", request.getQueryString());
         return new ModelAndView("demo", model);
     }

@@ -186,7 +186,7 @@ public class FetchOrderItemsTask {
         QueryShopPageRequest shopRequest = new QueryShopPageRequest();
         shopRequest.setPlatform(platformEnum.getPlatformName());
         shopRequest.setPageSize(20);
-        
+
         return shopService.getShopList(shopRequest).getData();
     }
 

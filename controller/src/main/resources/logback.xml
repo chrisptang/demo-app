@@ -30,6 +30,8 @@
         </encoder>
     </appender>
 
+    <appender class="com.dianping.cat.logback.CatLogbackAppender" name="cat"></appender>
+
     <appender name="MINISO-APPENDER" class="com.miniso.ecomm.logservice.client.MinisoLogServiceAppender">
         <encoder>
             <Pattern>
@@ -41,6 +43,7 @@
     <root level="info">
         <appender-ref ref="FILE-ROLLING"/>
         <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="cat"/>
         <appender-ref ref="MINISO-APPENDER"/>
     </root>
 
