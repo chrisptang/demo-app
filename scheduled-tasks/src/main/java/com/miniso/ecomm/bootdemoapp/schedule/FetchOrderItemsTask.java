@@ -109,9 +109,9 @@ public class FetchOrderItemsTask {
 
 
             ShopeeOrderRequest request = new ShopeeOrderRequest();
-            request.setPageSize(20);
-            request.setTimeFrom(ISODateTimeFormat.basicDateTime().parseDateTime(finalFromDay + START_TIME_SUFFIX).getMillis());
-            request.setTimeTo(ISODateTimeFormat.basicDateTime().parseDateTime(finalToDay + START_TIME_SUFFIX).getMillis());
+            request.setPageSize(10);
+            request.setTimeFrom(ISODateTimeFormat.dateTimeParser().parseDateTime(finalFromDay + START_TIME_SUFFIX).getMillis());
+            request.setTimeTo(ISODateTimeFormat.dateTimeParser().parseDateTime(finalToDay + START_TIME_SUFFIX).getMillis());
             com.miniso.ecomm.apigateway.client.dto.shopee.order.OrderPageDTO orderPageDTO
                     = shopeeOrderService.queryOrderList(shopId, request).getData();
 
@@ -161,11 +161,11 @@ public class FetchOrderItemsTask {
             AtomicInteger counter = new AtomicInteger(0);
 
             TokopediaOrderPageRequest pageRequest = new TokopediaOrderPageRequest();
-            pageRequest.setPerPage(20);
+            pageRequest.setPerPage(10);
             AtomicInteger pageCounter = new AtomicInteger(1);
             pageRequest.setPage(pageCounter.getAndIncrement());
-            pageRequest.setFromDate(ISODateTimeFormat.basicDateTime().parseDateTime(finalFromDay + START_TIME_SUFFIX).getMillis());
-            pageRequest.setToDate(ISODateTimeFormat.basicDateTime().parseDateTime(finalToDay + START_TIME_SUFFIX).getMillis());
+            pageRequest.setFromDate(ISODateTimeFormat.dateTimeParser().parseDateTime(finalFromDay + START_TIME_SUFFIX).getMillis());
+            pageRequest.setToDate(ISODateTimeFormat.dateTimeParser().parseDateTime(finalToDay + START_TIME_SUFFIX).getMillis());
             Result<List<com.miniso.ecomm.apigateway.client.dto.tokopedia.order.OrderDTO>> orderDTOs = tokopediaOrderService.getAllOrders(shopId, pageRequest);
 
             //先获取order；
@@ -185,9 +185,11 @@ public class FetchOrderItemsTask {
     private List<ShopDTO> getShopsByPlatform(PlatformEnum platformEnum) {
         QueryShopPageRequest shopRequest = new QueryShopPageRequest();
         shopRequest.setPlatform(platformEnum.getPlatformName());
-        shopRequest.setPageSize(20);
+        shopRequest.setPageSize(10);
 
-        return shopService.getShopList(shopRequest).getData();
+        return shopService.getShopList(shopRequest).getData().stream().filter(shopDTO -> {
+            return platformEnum.getPlatformName().equals(shopDTO.getPlatform());
+        }).collect(Collectors.toList());
     }
 
     private static String[] getDateRange(String dateRange) {

@@ -32,7 +32,7 @@ public class DemoController {
     public ModelAndView index() {
         Map<String, Object> model = new HashMap<>();
         model.put("now", new Date());
-        model.put("fetch", fetchOrderItemsTask.fetchTokopedia(null));
+        model.put("fetch", fetchOrderItemsTask.fetchLazada(null));
         model.put("requestQuery", request.getQueryString());
         return new ModelAndView("demo", model);
     }
