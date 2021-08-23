@@ -19,6 +19,7 @@ import com.miniso.ecomm.apigateway.client.services.tokopedia.TokopediaOrderServi
 import com.xxl.job.core.biz.model.ReturnT;
 import com.xxl.job.core.handler.annotation.XxlJob;
 import com.xxl.job.core.log.XxlJobLogger;
+import com.xxl.job.core.util.DateUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.dubbo.config.annotation.DubboReference;
@@ -64,33 +65,44 @@ public class FetchOrderItemsTask {
         final String finalToDay = range[1];
         XxlJobLogger.log("Fetch lazada raw order-item data for:{} ~ {}", finalFromDay, finalToDay);
 
+
+        Date startDay = DateUtil.parseDate(finalFromDay);
+        Date endDate = DateUtil.parseDate(finalToDay);
+
         List<String> resultString = Lists.newLinkedList();
-        getShopsByPlatform(PlatformEnum.LAZADA).forEach(shopDTO -> {
-            AtomicInteger counter = new AtomicInteger(0);
-            LazadaQueryOrdersRequest ordersRequest = new LazadaQueryOrdersRequest();
-            ordersRequest.setCreatedAfter(finalFromDay + START_TIME_SUFFIX);
-            ordersRequest.setCreatedBefore(finalToDay + END_TIME_SUFFIX);
-            ordersRequest.setOffset(0);
 
-            //先获取order；
-            OrderPageDTO orderPageDTO = lazadaOrderService.listItems4RangeOfOrders(shopDTO.getAccount(), ordersRequest).getData();
-            while (orderPageDTO != null) {
-                if (CollectionUtils.isNotEmpty(orderPageDTO.getOrders())) {
-                    XxlJobLogger.log("Shop:{}, total-orders:{}, running:{}",
-                            shopDTO.getAccount(), orderPageDTO.getCountTotal(), ordersRequest.getOffset());
-                    counter.addAndGet(orderPageDTO.getOrders().size());
-                    //再根据order ID获取order-item：
-                    lazadaOrderService.getItemInfoOfOrders(shopDTO.getAccount(), orderPageDTO.getOrders().stream()
-                            .map(OrderDTO::getOrderId).collect(Collectors.toList()));
-                    ordersRequest.setOffset(counter.get());
+        while (startDay.before(endDate)) {
+            Date tempEndDate = DateUtil.addHours(startDay, 12);
+            final String createdAfter = DateUtil.formatDate(startDay) + START_TIME_SUFFIX;
+            final String createdBefore = DateUtil.formatDate(tempEndDate) + START_TIME_SUFFIX;
+            getShopsByPlatform(PlatformEnum.LAZADA).forEach(shopDTO -> {
+                AtomicInteger counter = new AtomicInteger(0);
+                LazadaQueryOrdersRequest ordersRequest = new LazadaQueryOrdersRequest();
+                ordersRequest.setCreatedAfter(createdAfter);
+                ordersRequest.setCreatedBefore(createdBefore);
+                ordersRequest.setOffset(0);
 
-                    orderPageDTO = lazadaOrderService.listItems4RangeOfOrders(shopDTO.getAccount(), ordersRequest).getData();
-                } else {
-                    break;
+                //先获取order；
+                OrderPageDTO orderPageDTO = lazadaOrderService.listItems4RangeOfOrders(shopDTO.getAccount(), ordersRequest).getData();
+                while (orderPageDTO != null) {
+                    if (CollectionUtils.isNotEmpty(orderPageDTO.getOrders())) {
+                        XxlJobLogger.log("Shop:{}, total-orders:{}, running:{}",
+                                shopDTO.getAccount(), orderPageDTO.getCountTotal(), ordersRequest.getOffset());
+                        counter.addAndGet(orderPageDTO.getOrders().size());
+                        //再根据order ID获取order-item：
+                        lazadaOrderService.getItemInfoOfOrders(shopDTO.getAccount(), orderPageDTO.getOrders().stream()
+                                .map(OrderDTO::getOrderId).collect(Collectors.toList()));
+                        ordersRequest.setOffset(counter.get());
+
+                        orderPageDTO = lazadaOrderService.listItems4RangeOfOrders(shopDTO.getAccount(), ordersRequest).getData();
+                    } else {
+                        break;
+                    }
                 }
-            }
-            resultString.add(String.format("Shop:%s, total-items:%d", shopDTO.getAccount(), counter.get()));
-        });
+                resultString.add(String.format("Shop:%s, total-items:%d", shopDTO.getAccount(), counter.get()));
+            });
+            startDay = tempEndDate;
+        }
 
         return new ReturnT(resultString);
     }
@@ -161,11 +173,12 @@ public class FetchOrderItemsTask {
             AtomicInteger counter = new AtomicInteger(0);
 
             TokopediaOrderPageRequest pageRequest = new TokopediaOrderPageRequest();
-            pageRequest.setPerPage(10);
+            pageRequest.setPerPage(50);
             AtomicInteger pageCounter = new AtomicInteger(1);
             pageRequest.setPage(pageCounter.getAndIncrement());
             pageRequest.setFromDate(ISODateTimeFormat.dateTimeParser().parseDateTime(finalFromDay + START_TIME_SUFFIX).getMillis());
             pageRequest.setToDate(ISODateTimeFormat.dateTimeParser().parseDateTime(finalToDay + START_TIME_SUFFIX).getMillis());
+            pageRequest.setShopId(shopId);
             Result<List<com.miniso.ecomm.apigateway.client.dto.tokopedia.order.OrderDTO>> orderDTOs = tokopediaOrderService.getAllOrders(shopId, pageRequest);
 
             //先获取order；
