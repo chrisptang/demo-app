@@ -231,8 +231,11 @@ public class FetchOrderItemsTask {
         final String finalToDay = range[1];
         XxlJobLogger.log("Fetch amazon raw order-item data for:{} ~ {}", finalFromDay, finalToDay);
 
+        final int secondsToWaitSeconds = 12 * 3600, queryReportIntervalSeconds = 20;
+
         getShopsByPlatform(PlatformEnum.AMAZON).forEach(shopDTO -> {
             EXECUTOR_SERVICE.execute(() -> {
+                final AtomicInteger counter = new AtomicInteger(0);
                 AmazonOrderReportRequest amazonOrderReportRequest = new AmazonOrderReportRequest();
                 amazonOrderReportRequest.setSellingPartner(shopDTO.getAccount());
                 amazonOrderReportRequest.setDataStartTime(finalFromDay);
@@ -240,16 +243,21 @@ public class FetchOrderItemsTask {
                 Result<AmazonReportDTO> orderReportResult = amazonOrderService.createOrderReport(amazonOrderReportRequest);
                 XxlJobLogger.log("amazon shop:{}, request:{}", shopDTO.getAccount(), JSON.toJSONString(amazonOrderReportRequest));
                 if (Result.isNonEmptyResult(orderReportResult)) {
+                    final String reportId = orderReportResult.getData().getReportId();
                     while (!AmazonReportDTO.isDone(orderReportResult.getData())) {
+                        if (counter.getAndAdd(queryReportIntervalSeconds) >= secondsToWaitSeconds) {
+                            XxlJobLogger.log(new Exception("wait too many seconds:" + counter.get()));
+                            return;
+                        }
                         XxlJobLogger.log("shop:{}, report:{}", shopDTO.getAccount(), JSONObject.toJSONString(orderReportResult.getData()));
                         try {
-                            TimeUnit.SECONDS.sleep(20);
+                            TimeUnit.SECONDS.sleep(queryReportIntervalSeconds);
                         } catch (InterruptedException e) {
                             log.error("stopped unexpected:", e);
                             XxlJobLogger.log(e);
                             return;
                         }
-                        orderReportResult = amazonOrderService.getOrderReport(shopDTO.getAccount(), orderReportResult.getData().getReportId());
+                        orderReportResult = amazonOrderService.getOrderReport(shopDTO.getAccount(), reportId);
                     }
                     Result<AmazonReportDocumentDTO> orderDocumentResult = amazonOrderService.getOrderDocumentUrl(shopDTO.getAccount(), orderReportResult.getData().getReportDocumentId());
                     XxlJobLogger.log("shop:{}, document:{}", shopDTO.getAccount(), JSON.toJSONString(orderDocumentResult));
