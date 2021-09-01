@@ -46,4 +46,12 @@ class BootDemoAppApplicationTest {
         Assert.assertTrue(ReturnT.SUCCESS_CODE == returnT.getCode());
         TimeUnit.MINUTES.sleep(5L);
     }
+
+    @Test
+    public void testFetchAmazonOrderItemsTask() throws InterruptedException {
+        ReturnT<String> returnT = fetchOrderItemsTask.fetchAmazon("2021-07-13:2021-07-26");
+        log.info(JSON.toJSONString(returnT));
+        Assert.assertTrue(ReturnT.SUCCESS_CODE == returnT.getCode());
+        TimeUnit.MINUTES.sleep(5L);
+    }
 }

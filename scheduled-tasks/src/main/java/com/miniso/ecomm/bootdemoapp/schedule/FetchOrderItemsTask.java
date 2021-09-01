@@ -245,12 +245,16 @@ public class FetchOrderItemsTask {
                         try {
                             TimeUnit.SECONDS.sleep(20);
                         } catch (InterruptedException e) {
-                            log.warn("", e);
+                            log.error("stopped unexpected:", e);
+                            XxlJobLogger.log(e);
+                            return;
                         }
                         orderReportResult = amazonOrderService.getOrderReport(shopDTO.getAccount(), orderReportResult.getData().getReportId());
                     }
                     Result<AmazonReportDocumentDTO> orderDocumentResult = amazonOrderService.getOrderDocumentUrl(shopDTO.getAccount(), orderReportResult.getData().getReportDocumentId());
                     XxlJobLogger.log("shop:{}, document:{}", shopDTO.getAccount(), JSON.toJSONString(orderDocumentResult));
+                } else {
+                    XxlJobLogger.log(new Exception("create amazon report failed:" + JSON.toJSONString(orderReportResult)));
                 }
             });
         });
