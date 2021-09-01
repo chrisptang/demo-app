@@ -55,6 +55,8 @@ public class FetchOrderItemsTask {
 
     private static final String END_TIME_SUFFIX = "T23:59:59.999+08:00";
 
+    private static final SimpleDateFormat ISO_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
+
     @DubboReference
     private ShopService shopService;
 
@@ -85,8 +87,8 @@ public class FetchOrderItemsTask {
 
         while (startDay.before(endDate)) {
             Date tempEndDate = DateUtil.addHours(startDay, 8);
-            final String createdAfter = DateUtil.formatDate(startDay) + START_TIME_SUFFIX;
-            final String createdBefore = DateUtil.formatDate(tempEndDate) + START_TIME_SUFFIX;
+            final String createdAfter = ISO_DATE_FORMAT.format(startDay);
+            final String createdBefore = ISO_DATE_FORMAT.format(tempEndDate);
             getShopsByPlatform(PlatformEnum.LAZADA).forEach(shopDTO -> {
                 EXECUTOR_SERVICE.execute(() -> {
                     AtomicInteger counter = new AtomicInteger(0);
@@ -94,6 +96,8 @@ public class FetchOrderItemsTask {
                     ordersRequest.setCreatedAfter(createdAfter);
                     ordersRequest.setCreatedBefore(createdBefore);
                     ordersRequest.setOffset(0);
+
+                    XxlJobLogger.log("Shop:{}, ordersRequest:{}", shopDTO.getAccount(), JSON.toJSONString(ordersRequest));
 
                     //先获取order；
                     OrderPageDTO orderPageDTO = lazadaOrderService.listItems4RangeOfOrders(shopDTO.getAccount(), ordersRequest).getData();
@@ -234,11 +238,12 @@ public class FetchOrderItemsTask {
                 amazonOrderReportRequest.setDataStartTime(finalFromDay);
                 amazonOrderReportRequest.setDataEndTime(finalToDay);
                 Result<AmazonReportDTO> orderReportResult = amazonOrderService.createOrderReport(amazonOrderReportRequest);
+                XxlJobLogger.log("amazon shop:{}, request:{}", shopDTO.getAccount(), JSON.toJSONString(amazonOrderReportRequest));
                 if (Result.isNonEmptyResult(orderReportResult)) {
                     while (!AmazonReportDTO.isDone(orderReportResult.getData())) {
                         XxlJobLogger.log("shop:{}, report:{}", shopDTO.getAccount(), JSONObject.toJSONString(orderReportResult.getData()));
                         try {
-                            TimeUnit.SECONDS.sleep(10);
+                            TimeUnit.SECONDS.sleep(20);
                         } catch (InterruptedException e) {
                             log.warn("", e);
                         }
