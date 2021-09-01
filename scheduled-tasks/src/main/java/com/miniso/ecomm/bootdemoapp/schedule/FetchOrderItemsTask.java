@@ -266,11 +266,9 @@ public class FetchOrderItemsTask {
     private List<ShopDTO> getShopsByPlatform(PlatformEnum platformEnum) {
         QueryShopPageRequest shopRequest = new QueryShopPageRequest();
         shopRequest.setPlatform(platformEnum.getPlatformName());
-        shopRequest.setPageSize(10);
+        shopRequest.setPageSize(100);
 
-        return shopService.getShopList(shopRequest).getData().stream().filter(shopDTO -> {
-            return platformEnum.getPlatformName().equals(shopDTO.getPlatform());
-        }).collect(Collectors.toList());
+        return shopService.getShopList(shopRequest).getData();
     }
 
     private static String[] getDateRange(String dateRange) {
