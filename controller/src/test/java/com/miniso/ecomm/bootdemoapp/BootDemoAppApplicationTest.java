@@ -41,7 +41,7 @@ class BootDemoAppApplicationTest {
 
     @Test
     public void testFetchOrderItemsTask() throws InterruptedException {
-        ReturnT<String> returnT = fetchOrderItemsTask.fetchLazada("2021-07-13:2021-07-26");
+        ReturnT<String> returnT = fetchOrderItemsTask.fetchShopee("2021-07-13:2021-07-26");
         log.info(JSON.toJSONString(returnT));
         Assert.assertTrue(ReturnT.SUCCESS_CODE == returnT.getCode());
         TimeUnit.MINUTES.sleep(5L);

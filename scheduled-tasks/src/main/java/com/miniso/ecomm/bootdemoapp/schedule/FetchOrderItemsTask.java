@@ -9,6 +9,7 @@ import com.miniso.ecomm.apigateway.client.dto.amazon.report.AmazonReportDTO;
 import com.miniso.ecomm.apigateway.client.dto.amazon.report.AmazonReportDocumentDTO;
 import com.miniso.ecomm.apigateway.client.dto.lazada.order.OrderDTO;
 import com.miniso.ecomm.apigateway.client.dto.lazada.order.OrderPageDTO;
+import com.miniso.ecomm.apigateway.client.dto.shopee.payment.EscrowDetailDTO;
 import com.miniso.ecomm.apigateway.client.enums.PlatformEnum;
 import com.miniso.ecomm.apigateway.client.enums.SP_ResponseOptionalFiledEnum;
 import com.miniso.ecomm.apigateway.client.request.amazon.AmazonOrderReportRequest;
@@ -21,6 +22,7 @@ import com.miniso.ecomm.apigateway.client.services.ShopService;
 import com.miniso.ecomm.apigateway.client.services.amazon.AmazonOrderService;
 import com.miniso.ecomm.apigateway.client.services.lazada.LazadaOrderService;
 import com.miniso.ecomm.apigateway.client.services.shopee.ShopeeOrderService;
+import com.miniso.ecomm.apigateway.client.services.shopee.ShopeePaymentService;
 import com.miniso.ecomm.apigateway.client.services.tokopedia.TokopediaOrderService;
 import com.xxl.job.core.biz.model.ReturnT;
 import com.xxl.job.core.handler.annotation.XxlJob;
@@ -37,10 +39,9 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 @Component
@@ -72,7 +73,13 @@ public class FetchOrderItemsTask {
     @DubboReference
     private AmazonOrderService amazonOrderService;
 
+    @DubboReference
+    private ShopeePaymentService shopeePaymentService;
+
     private static final ExecutorService EXECUTOR_SERVICE = Executors.newFixedThreadPool(5);
+
+    private static final ExecutorService EXECUTOR_SERVICE_SHOPEE_FINANCE = new ThreadPoolExecutor(10, 10, 0
+            , TimeUnit.SECONDS, new LinkedBlockingQueue<>(2000), new ThreadPoolExecutor.CallerRunsPolicy());
 
     @XxlJob("fetchLazada")
     public ReturnT<String> fetchLazada(String dateRange) {
@@ -140,6 +147,8 @@ public class FetchOrderItemsTask {
             Date startDay = DateUtil.parseDate(finalFromDay);
             Date endDate = DateUtil.parseDate(finalToDay);
 
+            final AtomicLong financeCounter = new AtomicLong(0L);
+
             while (startDay.before(endDate)) {
                 Date tempEndDate = DateUtil.addHours(startDay, 12);
                 final long fromTime = startDay.getTime() / 1000L, toTime = tempEndDate.getTime() / 1000L;
@@ -163,8 +172,17 @@ public class FetchOrderItemsTask {
                             //再根据order ID获取order-item：
 
                             ShopeeOrderDetailRequest detailRequest = new ShopeeOrderDetailRequest();
-                            detailRequest.setOrderSNList(orderPageDTO.getOrderList().stream().map(
-                                            com.miniso.ecomm.apigateway.client.dto.shopee.order.OrderPageDTO.OrderInfo::getOrderSN)
+                            detailRequest.setOrderSNList(orderPageDTO.getOrderList().stream().map(orderInfo -> {
+                                        // 根据order-sn获取财务数据；
+                                        //异步
+                                        EXECUTOR_SERVICE_SHOPEE_FINANCE.execute(() -> {
+                                            Result<EscrowDetailDTO> escrowDetailDTOResult = shopeePaymentService.getEscrowDetail(shopId, orderInfo.getOrderSN());
+                                            if (financeCounter.getAndIncrement() % 100 == 0) {
+                                                XxlJobLogger.log("fetch shopee finance, shop:{}, result:{}", shopId, escrowDetailDTOResult.getData());
+                                            }
+                                        });
+                                        return orderInfo.getOrderSN();
+                                    })
                                     .collect(Collectors.joining(",")));
                             detailRequest.setResponseOptionalFieldEnums(Arrays.asList(SP_ResponseOptionalFiledEnum.values()));
                             XxlJobLogger.log("Shopee order-detail result:{}", shopeeOrderService.queryOrderDetail(shopId, detailRequest).isSuccess());
