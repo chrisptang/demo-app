@@ -113,7 +113,7 @@ public class FetchFinanceItemsTask {
                 TokopediaPaymentPageRequest paymentRequest = new TokopediaPaymentPageRequest();
                 paymentRequest.setFromDate(SIMPLE_DATE_FORMAT.format(finalStartDay));
                 paymentRequest.setToDate(SIMPLE_DATE_FORMAT.format(tempEndDate));
-                paymentRequest.setPerPage(50);
+                paymentRequest.setPerPage(500);
                 Result<PaymentDTO> paymentDTOResult = tokopediaPaymentService.getSaldoHistory(shopId, paymentRequest);
                 if (pageCounter.get() % 20 == 0) {
                     XxlJobLogger.log("shop:{}, finance result:{}", shopId, paymentDTOResult.getData());
