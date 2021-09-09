@@ -26,7 +26,6 @@ import com.miniso.ecomm.apigateway.client.services.shopee.ShopeePaymentService;
 import com.miniso.ecomm.apigateway.client.services.tokopedia.TokopediaOrderService;
 import com.xxl.job.core.biz.model.ReturnT;
 import com.xxl.job.core.handler.annotation.XxlJob;
-import com.xxl.job.core.log.XxlJobLogger;
 import com.xxl.job.core.util.DateUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
@@ -86,7 +85,7 @@ public class FetchOrderItemsTask {
         String[] range = getDateRange(dateRange);
         final String finalFromDay = range[0];
         final String finalToDay = range[1];
-        XxlJobLogger.log("Fetch lazada raw order-item data for:{} ~ {}", finalFromDay, finalToDay);
+        log.warn("Fetch lazada raw order-item data for:{} ~ {}", finalFromDay, finalToDay);
 
 
         Date startDay = DateUtil.parseDate(finalFromDay);
@@ -104,13 +103,13 @@ public class FetchOrderItemsTask {
                     ordersRequest.setCreatedBefore(createdBefore);
                     ordersRequest.setOffset(0);
 
-                    XxlJobLogger.log("Shop:{}, ordersRequest:{}", shopDTO.getAccount(), JSON.toJSONString(ordersRequest));
+                    log.warn("Shop:{}, ordersRequest:{}", shopDTO.getAccount(), JSON.toJSONString(ordersRequest));
 
                     //先获取order；
                     OrderPageDTO orderPageDTO = lazadaOrderService.listItems4RangeOfOrders(shopDTO.getAccount(), ordersRequest).getData();
                     while (orderPageDTO != null) {
                         if (CollectionUtils.isNotEmpty(orderPageDTO.getOrders())) {
-                            XxlJobLogger.log("Shop:{}, total-orders:{}, running:{}",
+                            log.warn("Shop:{}, total-orders:{}, running:{}",
                                     shopDTO.getAccount(), orderPageDTO.getCountTotal(), ordersRequest.getOffset());
                             counter.addAndGet(orderPageDTO.getOrders().size());
                             //再根据order ID获取order-item：
@@ -139,7 +138,7 @@ public class FetchOrderItemsTask {
         String[] range = getDateRange(dateRange);
         final String finalFromDay = range[0];
         final String finalToDay = range[1];
-        XxlJobLogger.log("Fetch shopee raw order-item data for:{} ~ {}", finalFromDay, finalToDay);
+        log.warn("Fetch shopee raw order-item data for:{} ~ {}", finalFromDay, finalToDay);
 
 
         getShopsByPlatform(PlatformEnum.SHOPEE).forEach(shopDTO -> {
@@ -158,7 +157,7 @@ public class FetchOrderItemsTask {
                     request.setTimeFrom(fromTime);
                     request.setTimeTo(toTime);
                     request.setTimeRangeField(ShopeeOrderRequest.TimeRangeFieldEnum.CREATE_TIME);
-                    XxlJobLogger.log("Shopee request:{}", JSON.toJSONString(request));
+                    log.warn("Shopee request:{}", JSON.toJSONString(request));
                     //先获取order；
                     com.miniso.ecomm.apigateway.client.dto.shopee.order.OrderPageDTO orderPageDTO
                             = shopeeOrderService.queryOrderList(shopId, request).getData();
@@ -166,7 +165,7 @@ public class FetchOrderItemsTask {
 
                     while (orderPageDTO != null) {
                         if (CollectionUtils.isNotEmpty(orderPageDTO.getOrderList())) {
-                            XxlJobLogger.log("Shop:{}, has more:{}, nextUrl:{}",
+                            log.warn("Shop:{}, has more:{}, nextUrl:{}",
                                     shopId, orderPageDTO.getMore(), orderPageDTO.getNextCursor());
 
                             //再根据order ID获取order-item：
@@ -178,14 +177,14 @@ public class FetchOrderItemsTask {
                                         EXECUTOR_SERVICE_SHOPEE_FINANCE.execute(() -> {
                                             Result<EscrowDetailDTO> escrowDetailDTOResult = shopeePaymentService.getEscrowDetail(shopId, orderInfo.getOrderSN());
                                             if (financeCounter.getAndIncrement() % 100 == 0) {
-                                                XxlJobLogger.log("fetch shopee finance, shop:{}, result:{}", shopId, escrowDetailDTOResult.getData());
+                                                log.warn("fetch shopee finance, shop:{}, result:{}", shopId, escrowDetailDTOResult.getData());
                                             }
                                         });
                                         return orderInfo.getOrderSN();
                                     })
                                     .collect(Collectors.joining(",")));
                             detailRequest.setResponseOptionalFieldEnums(Arrays.asList(SP_ResponseOptionalFiledEnum.values()));
-                            XxlJobLogger.log("Shopee order-detail result:{}", shopeeOrderService.queryOrderDetail(shopId, detailRequest).isSuccess());
+                            log.warn("Shopee order-detail result:{}", shopeeOrderService.queryOrderDetail(shopId, detailRequest).isSuccess());
 
                             if (orderPageDTO.getMore()) {
                                 request.setCursor(orderPageDTO.getNextCursor());
@@ -212,7 +211,7 @@ public class FetchOrderItemsTask {
         String[] range = getDateRange(dateRange);
         final String finalFromDay = range[0];
         final String finalToDay = range[1];
-        XxlJobLogger.log("Fetch tokopedia raw order-item data for:{} ~ {}", finalFromDay, finalToDay);
+        log.warn("Fetch tokopedia raw order-item data for:{} ~ {}", finalFromDay, finalToDay);
 
 
         List<String> resultString = Lists.newLinkedList();
@@ -231,7 +230,7 @@ public class FetchOrderItemsTask {
 
             //先获取order；
             while (Result.isNonEmptyResult(orderDTOs)) {
-                XxlJobLogger.log("Shop:{}, items-returned:{}",
+                log.warn("Shop:{}, items-returned:{}",
                         shopDTO.getAccount(), orderDTOs.getData().size());
                 pageRequest.setPage(pageCounter.getAndIncrement());
                 orderDTOs = tokopediaOrderService.getAllOrders(shopId, pageRequest);
@@ -247,7 +246,7 @@ public class FetchOrderItemsTask {
         String[] range = getDateRange(dateRange);
         final String finalFromDay = range[0];
         final String finalToDay = range[1];
-        XxlJobLogger.log("Fetch amazon raw order-item data for:{} ~ {}", finalFromDay, finalToDay);
+        log.warn("Fetch amazon raw order-item data for:{} ~ {}", finalFromDay, finalToDay);
 
         final int secondsToWaitSeconds = 12 * 3600, queryReportIntervalSeconds = 20;
 
@@ -259,28 +258,27 @@ public class FetchOrderItemsTask {
                 amazonOrderReportRequest.setDataStartTime(finalFromDay);
                 amazonOrderReportRequest.setDataEndTime(finalToDay);
                 Result<AmazonReportDTO> orderReportResult = amazonOrderService.createOrderReport(amazonOrderReportRequest);
-                XxlJobLogger.log("amazon shop:{}, request:{}", shopDTO.getAccount(), JSON.toJSONString(amazonOrderReportRequest));
+                log.warn("amazon shop:{}, request:{}", shopDTO.getAccount(), JSON.toJSONString(amazonOrderReportRequest));
                 if (Result.isNonEmptyResult(orderReportResult)) {
                     final String reportId = orderReportResult.getData().getReportId();
                     while (!AmazonReportDTO.isDone(orderReportResult.getData())) {
                         if (counter.getAndAdd(queryReportIntervalSeconds) >= secondsToWaitSeconds) {
-                            XxlJobLogger.log(new Exception("wait too many seconds:" + counter.get()));
+                            log.warn("", new Exception("wait too many seconds:" + counter.get()));
                             return;
                         }
-                        XxlJobLogger.log("shop:{}, report:{}", shopDTO.getAccount(), JSONObject.toJSONString(orderReportResult.getData()));
+                        log.warn("shop:{}, report:{}", shopDTO.getAccount(), JSONObject.toJSONString(orderReportResult.getData()));
                         try {
                             TimeUnit.SECONDS.sleep(queryReportIntervalSeconds);
                         } catch (InterruptedException e) {
                             log.error("stopped unexpected:", e);
-                            XxlJobLogger.log(e);
                             return;
                         }
                         orderReportResult = amazonOrderService.getOrderReport(shopDTO.getAccount(), reportId);
                     }
                     Result<AmazonReportDocumentDTO> orderDocumentResult = amazonOrderService.getOrderDocumentUrl(shopDTO.getAccount(), orderReportResult.getData().getReportDocumentId());
-                    XxlJobLogger.log("shop:{}, document:{}", shopDTO.getAccount(), JSON.toJSONString(orderDocumentResult));
+                    log.warn("shop:{}, document:{}", shopDTO.getAccount(), JSON.toJSONString(orderDocumentResult));
                 } else {
-                    XxlJobLogger.log(new Exception("create amazon report failed:" + JSON.toJSONString(orderReportResult)));
+                    log.warn("", new Exception("create amazon report failed:" + JSON.toJSONString(orderReportResult)));
                 }
             });
         });

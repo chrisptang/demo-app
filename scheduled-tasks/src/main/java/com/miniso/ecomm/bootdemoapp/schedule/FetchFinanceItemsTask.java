@@ -67,11 +67,13 @@ public class FetchFinanceItemsTask {
         String[] range = getDateRange(dateRange);
         final String finalFromDay = range[0];
         final String finalToDay = range[1];
-        XxlJobLogger.log("Fetch lazada raw order-item data for:{} ~ {}", finalFromDay, finalToDay);
+        log.warn("Fetch lazada raw order-item data for:{} ~ {}", finalFromDay, finalToDay);
 
 
         Date startDay = DateUtil.parseDate(finalFromDay);
         Date endDate = DateUtil.parseDate(finalToDay);
+
+        final int limit = 500;
 
         while (startDay.before(endDate)) {
             Date tempEndDate = DateUtil.addHours(startDay, 24);
@@ -84,15 +86,19 @@ public class FetchFinanceItemsTask {
                     LazadaQueryTransactionDetailRequest paymentRequest = new LazadaQueryTransactionDetailRequest();
                     paymentRequest.setStartTime(finalStartDay);
                     paymentRequest.setEndTime(finalStartDay);
-                    paymentRequest.setLimit("500");
+                    paymentRequest.setLimit(limit + "");
                     paymentRequest.setOffset("0");
 
-                    XxlJobLogger.log("Shop:{}, ordersRequest:{}", shopDTO.getAccount(), JSON.toJSONString(paymentRequest));
+                    log.warn("Shop:{}, ordersRequest:{}", shopDTO.getAccount(), JSON.toJSONString(paymentRequest));
 
                     Result<List<TransactionDTO>> listResult = lazadaPaymentService.getTransactionDetail(shopDTO.getAccount(), paymentRequest);
                     while (Result.isNonEmptyResult(listResult)) {
                         paymentRequest.setOffset(counter.addAndGet(listResult.getData().size()) + "");
-                        XxlJobLogger.log("Shop:{}, ordersRequest:{}", shopDTO.getAccount(), JSON.toJSONString(paymentRequest));
+                        log.warn("Shop:{}, ordersRequest:{}", shopDTO.getAccount(), JSON.toJSONString(paymentRequest));
+
+                        if (listResult.getData().size() < limit) {
+                            break;
+                        }
 
                         listResult = lazadaPaymentService.getTransactionDetail(shopDTO.getAccount(), paymentRequest);
                     }
@@ -109,7 +115,7 @@ public class FetchFinanceItemsTask {
         String[] range = getDateRange(dateRange);
         final String finalFromDay = range[0];
         final String finalToDay = range[1];
-        XxlJobLogger.log("Fetch tokopedia raw finance-item data for:{} ~ {}", finalFromDay, finalToDay);
+        log.warn("Fetch tokopedia raw finance-item data for:{} ~ {}", finalFromDay, finalToDay);
 
         Date startDay = DateUtil.parseDate(finalFromDay);
         Date endDate = DateUtil.parseDate(finalToDay);
@@ -127,10 +133,10 @@ public class FetchFinanceItemsTask {
                 paymentRequest.setPerPage(500);
                 Result<PaymentDTO> paymentDTOResult = getSaldoHistoryWithRetry(shopId, paymentRequest, 2);
                 if (pageCounter.get() % 20 == 0) {
-                    XxlJobLogger.log("shop:{}, finance result:{}", shopId, paymentDTOResult.getData());
+                    log.warn("shop:{}, finance result:{}", shopId, paymentDTOResult.getData());
                 }
                 while (Result.isNonEmptyResult(paymentDTOResult)) {
-                    XxlJobLogger.log("Shop:{}, items-returned:{}",
+                    log.warn("Shop:{}, items-returned:{}",
                             shopDTO.getAccount(), paymentDTOResult.getData().getSaldoHistory().size());
                     paymentRequest.setPage(pageCounter.getAndIncrement());
                     paymentDTOResult = getSaldoHistoryWithRetry(shopId, paymentRequest, 2);
