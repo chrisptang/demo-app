@@ -27,6 +27,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
@@ -114,7 +115,7 @@ public class FetchFinanceItemsTask {
                 paymentRequest.setFromDate(SIMPLE_DATE_FORMAT.format(finalStartDay));
                 paymentRequest.setToDate(SIMPLE_DATE_FORMAT.format(tempEndDate));
                 paymentRequest.setPerPage(500);
-                Result<PaymentDTO> paymentDTOResult = tokopediaPaymentService.getSaldoHistory(shopId, paymentRequest);
+                Result<PaymentDTO> paymentDTOResult = getSaldoHistoryWithRetry(shopId, paymentRequest, 2);
                 if (pageCounter.get() % 20 == 0) {
                     XxlJobLogger.log("shop:{}, finance result:{}", shopId, paymentDTOResult.getData());
                 }
@@ -122,13 +123,31 @@ public class FetchFinanceItemsTask {
                     XxlJobLogger.log("Shop:{}, items-returned:{}",
                             shopDTO.getAccount(), paymentDTOResult.getData().getSaldoHistory().size());
                     paymentRequest.setPage(pageCounter.getAndIncrement());
-                    paymentDTOResult = tokopediaPaymentService.getSaldoHistory(shopId, paymentRequest);
+                    paymentDTOResult = getSaldoHistoryWithRetry(shopId, paymentRequest, 2);
                 }
             });
             startDay = tempEndDate;
         }
 
         return new ReturnT("scheduled success");
+    }
+
+    private Result<PaymentDTO> getSaldoHistoryWithRetry(long shopId, TokopediaPaymentPageRequest paymentRequest, int retrying) {
+        if (retrying <= 0) {
+            return Result.failed("retry timeouted");
+        }
+        while (retrying-- > 0) {
+            Result<PaymentDTO> paymentDTOResult = tokopediaPaymentService.getSaldoHistory(shopId, paymentRequest);
+            if (Result.isSuccess(paymentDTOResult)) {
+                return paymentDTOResult;
+            } else {
+                try {
+                    TimeUnit.SECONDS.sleep(90);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
     }
 
     @XxlJob("fetchFinanceAmazon")
