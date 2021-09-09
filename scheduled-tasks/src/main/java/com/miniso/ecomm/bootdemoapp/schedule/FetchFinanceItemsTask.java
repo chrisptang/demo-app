@@ -134,7 +134,7 @@ public class FetchFinanceItemsTask {
 
     private Result<PaymentDTO> getSaldoHistoryWithRetry(long shopId, TokopediaPaymentPageRequest paymentRequest, int retrying) {
         if (retrying <= 0) {
-            return Result.failed("retry timeouted");
+            return Result.failed("retry timeout");
         }
         while (retrying-- > 0) {
             Result<PaymentDTO> paymentDTOResult = tokopediaPaymentService.getSaldoHistory(shopId, paymentRequest);
@@ -148,6 +148,7 @@ public class FetchFinanceItemsTask {
                 }
             }
         }
+        return Result.failed("retry timeout");
     }
 
     @XxlJob("fetchFinanceAmazon")
