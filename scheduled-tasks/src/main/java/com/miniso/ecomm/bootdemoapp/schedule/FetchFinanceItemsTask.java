@@ -3,9 +3,10 @@ package com.miniso.ecomm.bootdemoapp.schedule;
 import com.alibaba.fastjson.JSON;
 import com.miniso.boot.client.result.Result;
 import com.miniso.ecomm.apigateway.client.dto.ShopDTO;
+import com.miniso.ecomm.apigateway.client.dto.lazada.finance.TransactionDTO;
 import com.miniso.ecomm.apigateway.client.dto.tokopedia.payment.PaymentDTO;
 import com.miniso.ecomm.apigateway.client.enums.PlatformEnum;
-import com.miniso.ecomm.apigateway.client.request.lazada.LazadaQueryOrdersRequest;
+import com.miniso.ecomm.apigateway.client.request.lazada.LazadaQueryTransactionDetailRequest;
 import com.miniso.ecomm.apigateway.client.request.shop.QueryShopPageRequest;
 import com.miniso.ecomm.apigateway.client.request.tokopedia.TokopediaPaymentPageRequest;
 import com.miniso.ecomm.apigateway.client.services.ShopService;
@@ -47,7 +48,7 @@ public class FetchFinanceItemsTask {
     @DubboReference
     private ShopService shopService;
 
-    @DubboReference
+    @DubboReference(timeout = 60000)
     private LazadaPaymentService lazadaPaymentService;
 
     @DubboReference
@@ -73,19 +74,28 @@ public class FetchFinanceItemsTask {
         Date endDate = DateUtil.parseDate(finalToDay);
 
         while (startDay.before(endDate)) {
-            Date tempEndDate = DateUtil.addHours(startDay, 8);
-            final String createdAfter = ISO_DATE_FORMAT.format(startDay);
-            final String createdBefore = ISO_DATE_FORMAT.format(tempEndDate);
+            Date tempEndDate = DateUtil.addHours(startDay, 24);
+
+            Date finalStartDay = startDay;
             getShopsByPlatform(PlatformEnum.LAZADA).forEach(shopDTO -> {
                 EXECUTOR_SERVICE.execute(() -> {
+
                     AtomicInteger counter = new AtomicInteger(0);
-                    LazadaQueryOrdersRequest ordersRequest = new LazadaQueryOrdersRequest();
-                    ordersRequest.setCreatedAfter(createdAfter);
-                    ordersRequest.setCreatedBefore(createdBefore);
-                    ordersRequest.setOffset(0);
+                    LazadaQueryTransactionDetailRequest paymentRequest = new LazadaQueryTransactionDetailRequest();
+                    paymentRequest.setStartTime(finalStartDay);
+                    paymentRequest.setEndTime(finalStartDay);
+                    paymentRequest.setLimit("500");
+                    paymentRequest.setOffset("0");
 
+                    XxlJobLogger.log("Shop:{}, ordersRequest:{}", shopDTO.getAccount(), JSON.toJSONString(paymentRequest));
 
-                    XxlJobLogger.log("Shop:{}, ordersRequest:{}", shopDTO.getAccount(), JSON.toJSONString(ordersRequest));
+                    Result<List<TransactionDTO>> listResult = lazadaPaymentService.getTransactionDetail(shopDTO.getAccount(), paymentRequest);
+                    while (Result.isNonEmptyResult(listResult)) {
+                        paymentRequest.setOffset(counter.addAndGet(listResult.getData().size()) + "");
+                        XxlJobLogger.log("Shop:{}, ordersRequest:{}", shopDTO.getAccount(), JSON.toJSONString(paymentRequest));
+
+                        listResult = lazadaPaymentService.getTransactionDetail(shopDTO.getAccount(), paymentRequest);
+                    }
                 });
             });
             startDay = tempEndDate;

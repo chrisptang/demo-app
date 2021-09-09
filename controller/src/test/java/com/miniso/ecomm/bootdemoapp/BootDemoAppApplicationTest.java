@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.miniso.boot.client.result.Result;
 import com.miniso.ecomm.bootdemoapp.client.dto.SomeDummyObjDTO;
 import com.miniso.ecomm.bootdemoapp.client.service.DemoDubboService;
+import com.miniso.ecomm.bootdemoapp.schedule.FetchFinanceItemsTask;
 import com.miniso.ecomm.bootdemoapp.schedule.FetchOrderItemsTask;
 import com.xxl.job.core.biz.model.ReturnT;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +22,9 @@ class BootDemoAppApplicationTest {
 
     @Autowired
     private FetchOrderItemsTask fetchOrderItemsTask;
+
+    @Autowired
+    private FetchFinanceItemsTask fetchFinanceItemsTask;
 
     @Test
     void contextLoads() {
@@ -42,6 +46,14 @@ class BootDemoAppApplicationTest {
     @Test
     public void testFetchOrderItemsTask() throws InterruptedException {
         ReturnT<String> returnT = fetchOrderItemsTask.fetchShopee("2021-07-13:2021-07-26");
+        log.info(JSON.toJSONString(returnT));
+        Assert.assertTrue(ReturnT.SUCCESS_CODE == returnT.getCode());
+        TimeUnit.MINUTES.sleep(5L);
+    }
+
+    @Test
+    public void testFetchFinanceItemsTask() throws InterruptedException {
+        ReturnT<String> returnT = fetchFinanceItemsTask.fetchLazada("2021-06-01:2021-07-26");
         log.info(JSON.toJSONString(returnT));
         Assert.assertTrue(ReturnT.SUCCESS_CODE == returnT.getCode());
         TimeUnit.MINUTES.sleep(5L);
