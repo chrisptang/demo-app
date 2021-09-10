@@ -16,7 +16,6 @@ import com.miniso.ecomm.apigateway.client.services.tokopedia.TokopediaOrderServi
 import com.miniso.ecomm.apigateway.client.services.tokopedia.TokopediaPaymentService;
 import com.xxl.job.core.biz.model.ReturnT;
 import com.xxl.job.core.handler.annotation.XxlJob;
-import com.xxl.job.core.log.XxlJobLogger;
 import com.xxl.job.core.util.DateUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
@@ -54,7 +53,7 @@ public class FetchFinanceItemsTask {
     @DubboReference
     private TokopediaOrderService tokopediaOrderService;
 
-    @DubboReference
+    @DubboReference(timeout = 60000)
     private TokopediaPaymentService tokopediaPaymentService;
 
     @DubboReference
@@ -131,13 +130,15 @@ public class FetchFinanceItemsTask {
                 paymentRequest.setFromDate(SIMPLE_DATE_FORMAT.format(finalStartDay));
                 paymentRequest.setToDate(SIMPLE_DATE_FORMAT.format(tempEndDate));
                 paymentRequest.setPerPage(500);
+                paymentRequest.setPage(pageCounter.getAndIncrement());
                 Result<PaymentDTO> paymentDTOResult = getSaldoHistoryWithRetry(shopId, paymentRequest, 2);
-                if (pageCounter.get() % 20 == 0) {
-                    log.warn("shop:{}, finance result:{}", shopId, paymentDTOResult.getData());
-                }
                 while (Result.isNonEmptyResult(paymentDTOResult)) {
-                    log.warn("Shop:{}, items-returned:{}",
-                            shopDTO.getAccount(), paymentDTOResult.getData().getSaldoHistory().size());
+                    log.warn("Shop:{}, finance-items-returned:{}, request:{}",
+                            shopDTO.getAccount(), paymentDTOResult.getData().getSaldoHistory().size(), JSON.toJSONString(paymentRequest));
+                    if (paymentDTOResult.getData().getSaldoHistory().size() <= 0) {
+                        log.warn("tokopedia-finance-item finished:{}", JSON.toJSONString(paymentRequest));
+                        return;
+                    }
                     paymentRequest.setPage(pageCounter.getAndIncrement());
                     paymentDTOResult = getSaldoHistoryWithRetry(shopId, paymentRequest, 2);
                 }

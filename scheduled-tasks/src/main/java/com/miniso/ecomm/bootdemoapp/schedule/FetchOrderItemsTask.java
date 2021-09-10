@@ -30,10 +30,10 @@ import com.xxl.job.core.util.DateUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.dubbo.config.annotation.DubboReference;
-import org.joda.time.format.ISODateTimeFormat;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
@@ -66,7 +66,7 @@ public class FetchOrderItemsTask {
     @DubboReference
     private ShopeeOrderService shopeeOrderService;
 
-    @DubboReference
+    @DubboReference(timeout = 60000)
     private TokopediaOrderService tokopediaOrderService;
 
     @DubboReference
@@ -207,15 +207,14 @@ public class FetchOrderItemsTask {
 
 
     @XxlJob("fetchTokopedia")
-    public ReturnT<String> fetchTokopedia(String dateRange) {
+    public ReturnT<String> fetchTokopedia(String dateRange) throws ParseException {
         String[] range = getDateRange(dateRange);
         final String finalFromDay = range[0];
         final String finalToDay = range[1];
-        log.warn("Fetch tokopedia raw order-item data for:{} ~ {}", finalFromDay, finalToDay);
-
 
         List<String> resultString = Lists.newLinkedList();
-        getShopsByPlatform(PlatformEnum.TOKOPEDIA).forEach(shopDTO -> {
+        for (ShopDTO shopDTO : getShopsByPlatform(PlatformEnum.TOKOPEDIA)) {
+            log.warn("Fetch tokopedia raw order-item data for:{} ~ {}", finalFromDay, finalToDay);
             final long shopId = Long.parseLong(shopDTO.getAccount());
             AtomicInteger counter = new AtomicInteger(0);
 
@@ -223,10 +222,15 @@ public class FetchOrderItemsTask {
             pageRequest.setPerPage(50);
             AtomicInteger pageCounter = new AtomicInteger(1);
             pageRequest.setPage(pageCounter.getAndIncrement());
-            pageRequest.setFromDate(ISODateTimeFormat.dateTimeParser().parseDateTime(finalFromDay + START_TIME_SUFFIX).getMillis());
-            pageRequest.setToDate(ISODateTimeFormat.dateTimeParser().parseDateTime(finalToDay + START_TIME_SUFFIX).getMillis());
+            pageRequest.setFromDate(SIMPLE_DATE_FORMAT.parse(finalFromDay).getTime() / 1000L);
+            pageRequest.setToDate(SIMPLE_DATE_FORMAT.parse(finalToDay).getTime() / 1000L);
             pageRequest.setShopId(shopId);
+            log.warn(JSON.toJSONString(pageRequest));
             Result<List<com.miniso.ecomm.apigateway.client.dto.tokopedia.order.OrderDTO>> orderDTOs = tokopediaOrderService.getAllOrders(shopId, pageRequest);
+
+            if (Result.isFailed(orderDTOs)) {
+                throw new RuntimeException(JSON.toJSONString(orderDTOs, true));
+            }
 
             //先获取order；
             while (Result.isNonEmptyResult(orderDTOs)) {
@@ -235,8 +239,9 @@ public class FetchOrderItemsTask {
                 pageRequest.setPage(pageCounter.getAndIncrement());
                 orderDTOs = tokopediaOrderService.getAllOrders(shopId, pageRequest);
             }
+
             resultString.add(String.format("Shop:%s, total-items:%d", shopDTO.getAccount(), counter.get()));
-        });
+        }
 
         return new ReturnT(resultString);
     }
