@@ -243,44 +243,54 @@ public class FetchOrderItemsTask {
 
     @XxlJob("fetchAmazon")
     public ReturnT<String> fetchAmazon(String dateRange) {
-        String[] range = getDateRange(dateRange);
-        final String finalFromDay = range[0];
-        final String finalToDay = range[1];
-        log.warn("Fetch amazon raw order-item data for:{} ~ {}", finalFromDay, finalToDay);
+        final String[] range = getDateRange(dateRange);
+        final Date finalToDay = DateUtil.parseDate(range[1]);
+        log.warn("Fetch amazon raw order-item data for:{} ~ {}", range[0], range[1]);
 
         final int secondsToWaitSeconds = 12 * 3600, queryReportIntervalSeconds = 20;
 
         getShopsByPlatform(PlatformEnum.AMAZON).forEach(shopDTO -> {
-            EXECUTOR_SERVICE.execute(() -> {
-                final AtomicInteger counter = new AtomicInteger(0);
-                AmazonOrderReportRequest amazonOrderReportRequest = new AmazonOrderReportRequest();
-                amazonOrderReportRequest.setSellingPartner(shopDTO.getAccount());
-                amazonOrderReportRequest.setDataStartTime(finalFromDay);
-                amazonOrderReportRequest.setDataEndTime(finalToDay);
-                Result<AmazonReportDTO> orderReportResult = amazonOrderService.createOrderReport(amazonOrderReportRequest);
-                log.warn("amazon shop:{}, request:{}", shopDTO.getAccount(), JSON.toJSONString(amazonOrderReportRequest));
-                if (Result.isNonEmptyResult(orderReportResult)) {
-                    final String reportId = orderReportResult.getData().getReportId();
-                    while (!AmazonReportDTO.isDone(orderReportResult.getData())) {
-                        if (counter.getAndAdd(queryReportIntervalSeconds) >= secondsToWaitSeconds) {
-                            log.warn("", new Exception("wait too many seconds:" + counter.get()));
-                            return;
-                        }
-                        log.warn("shop:{}, report:{}", shopDTO.getAccount(), JSONObject.toJSONString(orderReportResult.getData()));
-                        try {
-                            TimeUnit.SECONDS.sleep(queryReportIntervalSeconds);
-                        } catch (InterruptedException e) {
-                            log.error("stopped unexpected:", e);
-                            return;
-                        }
-                        orderReportResult = amazonOrderService.getOrderReport(shopDTO.getAccount(), reportId);
-                    }
-                    Result<AmazonReportDocumentDTO> orderDocumentResult = amazonOrderService.getOrderDocumentUrl(shopDTO.getAccount(), orderReportResult.getData().getReportDocumentId());
-                    log.warn("shop:{}, document:{}", shopDTO.getAccount(), JSON.toJSONString(orderDocumentResult));
-                } else {
-                    log.warn("", new Exception("create amazon report failed:" + JSON.toJSONString(orderReportResult)));
+            Date fromDay = DateUtil.parseDate(range[0]);
+            while (fromDay.before(finalToDay)) {
+                Date tempEndDate = DateUtil.addDays(fromDay, 20);
+                if (tempEndDate.after(finalToDay)) {
+                    tempEndDate = finalToDay;
                 }
-            });
+                Date finalTempEndDate = tempEndDate;
+                final Date finalFromDay = fromDay;
+                EXECUTOR_SERVICE.execute(() -> {
+                    final AtomicInteger counter = new AtomicInteger(0);
+                    AmazonOrderReportRequest amazonOrderReportRequest = new AmazonOrderReportRequest();
+                    amazonOrderReportRequest.setSellingPartner(shopDTO.getAccount());
+                    amazonOrderReportRequest.setDataStartTime(SIMPLE_DATE_FORMAT.format(finalFromDay));
+                    amazonOrderReportRequest.setDataEndTime(SIMPLE_DATE_FORMAT.format(finalTempEndDate));
+                    Result<AmazonReportDTO> orderReportResult = amazonOrderService.createOrderReport(amazonOrderReportRequest);
+                    log.warn("amazon shop:{}, request:{}", shopDTO.getAccount(), JSON.toJSONString(amazonOrderReportRequest));
+                    if (Result.isNonEmptyResult(orderReportResult)) {
+                        final String reportId = orderReportResult.getData().getReportId();
+                        while (!AmazonReportDTO.isDone(orderReportResult.getData())) {
+                            if (counter.getAndAdd(queryReportIntervalSeconds) >= secondsToWaitSeconds) {
+                                log.warn("", new Exception("wait too many seconds:" + counter.get()));
+                                return;
+                            }
+                            log.warn("shop:{}, report:{}", shopDTO.getAccount(), JSONObject.toJSONString(orderReportResult.getData()));
+                            try {
+                                TimeUnit.SECONDS.sleep(queryReportIntervalSeconds);
+                            } catch (InterruptedException e) {
+                                log.error("stopped unexpected, shop:{}, report:{}", shopDTO.getAccount(), JSONObject.toJSONString(orderReportResult.getData()));
+                                log.error("", e);
+                                return;
+                            }
+                            orderReportResult = amazonOrderService.getOrderReport(shopDTO.getAccount(), reportId);
+                        }
+                        Result<AmazonReportDocumentDTO> orderDocumentResult = amazonOrderService.getOrderDocumentUrl(shopDTO.getAccount(), orderReportResult.getData().getReportDocumentId());
+                        log.warn("shop:{}, document:{}", shopDTO.getAccount(), JSON.toJSONString(orderDocumentResult));
+                    } else {
+                        log.warn("", new Exception("create amazon report failed:" + JSON.toJSONString(orderReportResult)));
+                    }
+                });
+                fromDay = tempEndDate;
+            }
         });
 
         return new ReturnT("Scheduled success");
