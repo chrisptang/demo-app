@@ -19,6 +19,7 @@ import com.xxl.job.core.handler.annotation.XxlJob;
 import com.xxl.job.core.util.DateUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -58,6 +59,9 @@ public class FetchFinanceItemsTask {
 
     @DubboReference
     private AmazonOrderService amazonOrderService;
+
+    @Value("${tokopedia.payment.service.retry.interval:90}")
+    private int retryInterval;
 
     private static final ExecutorService EXECUTOR_SERVICE = Executors.newFixedThreadPool(5);
 
@@ -158,8 +162,9 @@ public class FetchFinanceItemsTask {
             if (Result.isSuccess(paymentDTOResult)) {
                 return paymentDTOResult;
             } else {
+                log.warn(paymentDTOResult.getMessage());
                 try {
-                    TimeUnit.SECONDS.sleep(90);
+                    TimeUnit.SECONDS.sleep(retryInterval);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
