@@ -44,7 +44,7 @@ class BootDemoAppApplicationTest {
         Assert.assertTrue(Result.isSuccess(result));
     }
 
-    @Test
+//    @Test
     public void testFetchOrderItemsTask() throws InterruptedException, ParseException {
         String[] ranges = {"2021-02-18:2021-02-20", "2021-01-24:2021-01-26", "2021-01-06:2021-01-08", "2020-12-17:2020-12-19"
                 , "2020-11-28:2020-11-30", "2020-10-18:2020-10-20", "2020-09-25:2020-09-27", "2020-09-18:2020-09-20"
@@ -57,7 +57,7 @@ class BootDemoAppApplicationTest {
         Assert.assertTrue(true);
     }
 
-    @Test
+//    @Test
     public void testFetchFinanceItemsTask() throws InterruptedException {
         ReturnT<String> returnT = fetchFinanceItemsTask.fetchTokopedia("2021-06-01:2021-07-01");
         log.info(JSON.toJSONString(returnT));
@@ -65,7 +65,7 @@ class BootDemoAppApplicationTest {
         TimeUnit.MINUTES.sleep(45L);
     }
 
-    @Test
+//    @Test
     public void testFetchAmazonOrderItemsTask() throws InterruptedException {
         ReturnT<String> returnT = fetchOrderItemsTask.fetchAmazon("2021-07-13:2021-07-26");
         log.info(JSON.toJSONString(returnT));
