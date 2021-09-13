@@ -31,7 +31,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -43,17 +42,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
+import static com.miniso.ecomm.bootdemoapp.schedule.ParameterUtils.getDateRange;
+
 @Component
 @Slf4j
 public class FetchOrderItemsTask {
 
     private static final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
-
-    private static final long ONE_DAY_IN_MILLISECONDS = 24 * 3600 * 1000L;
-
-    private static final String START_TIME_SUFFIX = "T00:00:00.000+08:00";
-
-    private static final String END_TIME_SUFFIX = "T23:59:59.999+08:00";
 
     private static final SimpleDateFormat ISO_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
 
@@ -301,25 +296,11 @@ public class FetchOrderItemsTask {
         return new ReturnT("Scheduled success");
     }
 
-
     private List<ShopDTO> getShopsByPlatform(PlatformEnum platformEnum) {
         QueryShopPageRequest shopRequest = new QueryShopPageRequest();
         shopRequest.setPlatform(platformEnum.getPlatformName());
         shopRequest.setPageSize(100);
 
         return shopService.getShopList(shopRequest).getData();
-    }
-
-    private static String[] getDateRange(String dateRange) {
-        String toDay = SIMPLE_DATE_FORMAT.format(new Date(System.currentTimeMillis() - ONE_DAY_IN_MILLISECONDS));
-        String fromDay = SIMPLE_DATE_FORMAT.format(new Date(System.currentTimeMillis() - 30 * ONE_DAY_IN_MILLISECONDS));
-        if (!StringUtils.isEmpty(dateRange)) {
-            String[] range = dateRange.split(":");
-            if (range.length > 1) {
-                return range;
-            }
-        }
-
-        return new String[]{fromDay, toDay};
     }
 }

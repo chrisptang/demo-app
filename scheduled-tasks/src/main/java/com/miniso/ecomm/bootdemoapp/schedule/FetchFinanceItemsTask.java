@@ -21,7 +21,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -31,19 +30,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.miniso.ecomm.bootdemoapp.schedule.ParameterUtils.getDateRange;
+
 @Component
 @Slf4j
 public class FetchFinanceItemsTask {
 
     private static final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
-
-    private static final long ONE_DAY_IN_MILLISECONDS = 24 * 3600 * 1000L;
-
-    private static final String START_TIME_SUFFIX = "T00:00:00.000+08:00";
-
-    private static final String END_TIME_SUFFIX = "T23:59:59.999+08:00";
-
-    private static final SimpleDateFormat ISO_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
 
     @DubboReference
     private ShopService shopService;
@@ -186,18 +179,5 @@ public class FetchFinanceItemsTask {
         shopRequest.setPageSize(100);
 
         return shopService.getShopList(shopRequest).getData();
-    }
-
-    private static String[] getDateRange(String dateRange) {
-        String toDay = SIMPLE_DATE_FORMAT.format(new Date(System.currentTimeMillis() - ONE_DAY_IN_MILLISECONDS));
-        String fromDay = SIMPLE_DATE_FORMAT.format(new Date(System.currentTimeMillis() - 30 * ONE_DAY_IN_MILLISECONDS));
-        if (!StringUtils.isEmpty(dateRange)) {
-            String[] range = dateRange.split(":");
-            if (range.length > 1) {
-                return range;
-            }
-        }
-
-        return new String[]{fromDay, toDay};
     }
 }
