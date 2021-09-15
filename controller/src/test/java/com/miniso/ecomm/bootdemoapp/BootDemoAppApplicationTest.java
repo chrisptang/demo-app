@@ -7,6 +7,7 @@ import com.miniso.ecomm.bootdemoapp.client.service.DemoDubboService;
 import com.miniso.ecomm.bootdemoapp.schedule.FetchFinanceItemsTask;
 import com.miniso.ecomm.bootdemoapp.schedule.FetchOrderItemsTask;
 import com.xxl.job.core.biz.model.ReturnT;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
@@ -44,7 +45,7 @@ class BootDemoAppApplicationTest {
         Assert.assertTrue(Result.isSuccess(result));
     }
 
-//    @Test
+    //    @Test
     public void testFetchOrderItemsTask() throws InterruptedException, ParseException {
         String[] ranges = {"2021-02-18:2021-02-20", "2021-01-24:2021-01-26", "2021-01-06:2021-01-08", "2020-12-17:2020-12-19"
                 , "2020-11-28:2020-11-30", "2020-10-18:2020-10-20", "2020-09-25:2020-09-27", "2020-09-18:2020-09-20"
@@ -57,7 +58,7 @@ class BootDemoAppApplicationTest {
         Assert.assertTrue(true);
     }
 
-//    @Test
+    //    @Test
     public void testFetchFinanceItemsTask() throws InterruptedException {
         ReturnT<String> returnT = fetchFinanceItemsTask.fetchTokopedia("2021-06-01:2021-07-01");
         log.info(JSON.toJSONString(returnT));
@@ -65,11 +66,20 @@ class BootDemoAppApplicationTest {
         TimeUnit.MINUTES.sleep(45L);
     }
 
-//    @Test
+    //    @Test
     public void testFetchAmazonOrderItemsTask() throws InterruptedException {
         ReturnT<String> returnT = fetchOrderItemsTask.fetchAmazon("2021-07-13:2021-07-26");
         log.info(JSON.toJSONString(returnT));
         Assert.assertTrue(ReturnT.SUCCESS_CODE == returnT.getCode());
         TimeUnit.MINUTES.sleep(5L);
+    }
+
+    @SneakyThrows
+    @Test
+    public void testFetchATokopediaOrderItemsTask() throws InterruptedException {
+        ReturnT<String> returnT = fetchOrderItemsTask.fetchTokopedia("2020-01-01:2020-06-19");
+        log.info(JSON.toJSONString(returnT));
+        Assert.assertTrue(ReturnT.SUCCESS_CODE == returnT.getCode());
+        TimeUnit.MINUTES.sleep(60L);
     }
 }

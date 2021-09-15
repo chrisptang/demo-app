@@ -2,7 +2,6 @@ package com.miniso.ecomm.bootdemoapp.schedule;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-import com.google.common.collect.Lists;
 import com.miniso.boot.client.result.Result;
 import com.miniso.ecomm.apigateway.client.dto.ShopDTO;
 import com.miniso.ecomm.apigateway.client.dto.amazon.report.AmazonReportDTO;
@@ -206,39 +205,63 @@ public class FetchOrderItemsTask {
         String[] range = getDateRange(dateRange);
         final String finalFromDay = range[0];
         final String finalToDay = range[1];
+        Date startDay = DateUtil.parseDate(finalFromDay);
+        Date endDate = DateUtil.parseDate(finalToDay);
 
-        List<String> resultString = Lists.newLinkedList();
         for (ShopDTO shopDTO : getShopsByPlatform(PlatformEnum.TOKOPEDIA)) {
             log.warn("Fetch tokopedia raw order-item data for:{} ~ {}", finalFromDay, finalToDay);
             final long shopId = Long.parseLong(shopDTO.getAccount());
-            AtomicInteger counter = new AtomicInteger(0);
 
-            TokopediaOrderPageRequest pageRequest = new TokopediaOrderPageRequest();
-            pageRequest.setPerPage(50);
-            AtomicInteger pageCounter = new AtomicInteger(1);
-            pageRequest.setPage(pageCounter.getAndIncrement());
-            pageRequest.setFromDate(SIMPLE_DATE_FORMAT.parse(finalFromDay).getTime() / 1000L);
-            pageRequest.setToDate(SIMPLE_DATE_FORMAT.parse(finalToDay).getTime() / 1000L);
-            pageRequest.setShopId(shopId);
-            log.warn(JSON.toJSONString(pageRequest));
-            Result<List<com.miniso.ecomm.apigateway.client.dto.tokopedia.order.OrderDTO>> orderDTOs = tokopediaOrderService.getAllOrders(shopId, pageRequest);
+            while (startDay.before(endDate)) {
+                Date tempEndDate = DateUtil.addHours(startDay, 24);
+                final long fromTime = startDay.getTime() / 1000L, toTime = tempEndDate.getTime() / 1000L;
+                EXECUTOR_SERVICE.execute(() -> {
+                    TokopediaOrderPageRequest pageRequest = new TokopediaOrderPageRequest();
+                    pageRequest.setPerPage(50);
+                    AtomicInteger pageCounter = new AtomicInteger(1);
+                    pageRequest.setPage(pageCounter.getAndIncrement());
+                    pageRequest.setFromDate(fromTime);
+                    pageRequest.setToDate(toTime);
+                    pageRequest.setShopId(shopId);
+                    Result<List<com.miniso.ecomm.apigateway.client.dto.tokopedia.order.OrderDTO>> orderDTOs = getTokopediaAllOrders(shopId, pageRequest, 0);
 
-            if (Result.isFailed(orderDTOs)) {
-                throw new RuntimeException(JSON.toJSONString(orderDTOs, true));
+                    if (Result.isFailed(orderDTOs)) {
+                        throw new RuntimeException(JSON.toJSONString(orderDTOs, true));
+                    }
+
+                    //先获取order；
+                    while (Result.isNonEmptyResult(orderDTOs)) {
+                        log.warn("Shop:{}, order-items returned:{}",
+                                shopDTO.getAccount(), orderDTOs.getData().size());
+                        pageRequest.setPage(pageCounter.getAndIncrement());
+                        orderDTOs = getTokopediaAllOrders(shopId, pageRequest, 0);
+                    }
+                });
+                startDay = tempEndDate;
             }
-
-            //先获取order；
-            while (Result.isNonEmptyResult(orderDTOs)) {
-                log.warn("Shop:{}, items-returned:{}",
-                        shopDTO.getAccount(), orderDTOs.getData().size());
-                pageRequest.setPage(pageCounter.getAndIncrement());
-                orderDTOs = tokopediaOrderService.getAllOrders(shopId, pageRequest);
-            }
-
-            resultString.add(String.format("Shop:%s, total-items:%d", shopDTO.getAccount(), counter.get()));
         }
+        return new ReturnT("schedule success");
+    }
 
-        return new ReturnT(resultString);
+    private Result<List<com.miniso.ecomm.apigateway.client.dto.tokopedia.order.OrderDTO>> getTokopediaAllOrders(long shopId, TokopediaOrderPageRequest pageRequest, int retrying) {
+        if (retrying++ > 3) {
+            return Result.failed("too many retry:" + retrying);
+        }
+        log.warn(JSON.toJSONString(pageRequest));
+        Result<List<com.miniso.ecomm.apigateway.client.dto.tokopedia.order.OrderDTO>> orderDTOs = tokopediaOrderService.getAllOrders(shopId, pageRequest);
+        if (Result.isSuccess(orderDTOs)) {
+            return orderDTOs;
+        }
+        log.warn(JSON.toJSONString(orderDTOs));
+        if (retrying < 3) {
+            try {
+                TimeUnit.SECONDS.sleep(30);
+                return getTokopediaAllOrders(shopId, pageRequest, retrying);
+            } catch (InterruptedException e) {
+                return Result.failed(e.getMessage());
+            }
+        }
+        return orderDTOs;
     }
 
     @XxlJob("fetchAmazon")
