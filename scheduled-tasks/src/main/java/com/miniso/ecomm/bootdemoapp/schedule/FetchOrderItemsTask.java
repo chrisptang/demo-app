@@ -76,6 +76,16 @@ public class FetchOrderItemsTask {
 
     @XxlJob("fetchLazada")
     public ReturnT<String> fetchLazada(String dateRange) {
+        return fetchLazadaBiz(dateRange, 8);
+    }
+
+    @XxlJob("fetchLazadaHourly")
+    public ReturnT<String> fetchLazadaHourly(String dateRange) {
+        return fetchLazadaBiz(dateRange, 1);
+    }
+
+    public ReturnT<String> fetchLazadaBiz(String dateRange, int hourInterval) {
+        hourInterval = Math.max(Math.min(24, hourInterval), 1);
         String[] range = getDateRange(dateRange);
         final String finalFromDay = range[0];
         final String finalToDay = range[1];
@@ -86,7 +96,7 @@ public class FetchOrderItemsTask {
         Date endDate = DateUtil.parseDate(finalToDay);
 
         while (startDay.before(endDate)) {
-            Date tempEndDate = DateUtil.addHours(startDay, 8);
+            Date tempEndDate = DateUtil.addHours(startDay, hourInterval);
             final String createdAfter = ISO_DATE_FORMAT.format(startDay);
             final String createdBefore = ISO_DATE_FORMAT.format(tempEndDate);
             getShopsByPlatform(PlatformEnum.LAZADA).forEach(shopDTO -> {
