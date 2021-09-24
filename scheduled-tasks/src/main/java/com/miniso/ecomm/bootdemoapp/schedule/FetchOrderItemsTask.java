@@ -9,6 +9,7 @@ import com.miniso.ecomm.apigateway.client.dto.amazon.report.AmazonReportDocument
 import com.miniso.ecomm.apigateway.client.dto.lazada.order.OrderDTO;
 import com.miniso.ecomm.apigateway.client.dto.lazada.order.OrderPageDTO;
 import com.miniso.ecomm.apigateway.client.dto.shopee.payment.EscrowDetailDTO;
+import com.miniso.ecomm.apigateway.client.enums.AmazonReportProcessingStatusEnum;
 import com.miniso.ecomm.apigateway.client.enums.PlatformEnum;
 import com.miniso.ecomm.apigateway.client.enums.SP_ResponseOptionalFiledEnum;
 import com.miniso.ecomm.apigateway.client.request.amazon.AmazonOrderReportRequest;
@@ -303,7 +304,11 @@ public class FetchOrderItemsTask {
                         final String reportId = orderReportResult.getData().getReportId();
                         while (!AmazonReportDTO.isDone(orderReportResult.getData())) {
                             if (counter.getAndAdd(queryReportIntervalSeconds) >= secondsToWaitSeconds) {
-                                log.warn("", new Exception("wait too many seconds:" + counter.get()));
+                                log.error("", new Exception("wait too many seconds:" + counter.get()));
+                                return;
+                            }
+                            if (AmazonReportProcessingStatusEnum.CANCELLED.equals(orderReportResult.getData().getProcessingStatus())) {
+                                log.error("", new Exception("report been cancelled:" + orderReportResult.getData()));
                                 return;
                             }
                             log.warn("shop:{}, report:{}", shopDTO.getAccount(), JSONObject.toJSONString(orderReportResult.getData()));
