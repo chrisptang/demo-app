@@ -166,7 +166,7 @@ public class FetchFinanceItemsTask {
                 escrowListRequest.setPageSize(pageSize);
                 escrowListRequest.setPageNo(pageCounter.getAndIncrement());
                 escrowListRequest.setReleaseTimeFrom(finalStartDay.getTime() / 1000L);
-                escrowListRequest.setReleaseTimeFrom(tempEndDate.getTime() / 1000L);
+                escrowListRequest.setReleaseTimeTo(tempEndDate.getTime() / 1000L);
 
                 Result<EscrowDTO> escrowDTOResult = shopeePaymentService.getEscrowList(shopId, escrowListRequest);
                 while (Result.isSuccess(escrowDTOResult)) {
@@ -180,6 +180,7 @@ public class FetchFinanceItemsTask {
                         escrowDTOResult = shopeePaymentService.getEscrowList(shopId, escrowListRequest);
                     }
                 }
+                log.warn("Fetch shopee raw Escrow-List task ended up with failed result:{}", escrowDTOResult);
             });
             startDay = tempEndDate;
         }

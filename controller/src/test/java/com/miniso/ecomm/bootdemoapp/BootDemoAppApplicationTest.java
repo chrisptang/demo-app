@@ -1,6 +1,8 @@
 package com.miniso.ecomm.bootdemoapp;
 
 import com.alibaba.fastjson.JSON;
+import com.miniso.boot.autoconfiguration.common.EnvUtil;
+import com.miniso.boot.autoconfiguration.common.SupportedEnv;
 import com.miniso.boot.client.result.Result;
 import com.miniso.ecomm.bootdemoapp.client.dto.SomeDummyObjDTO;
 import com.miniso.ecomm.bootdemoapp.client.service.DemoDubboService;
@@ -32,6 +34,15 @@ class BootDemoAppApplicationTest {
     void contextLoads() {
     }
 
+    private static int sleep_wait_seconds = 60 * 10;
+
+    static {
+        if (SupportedEnv.Dev != EnvUtil.getSupportedEnv()) {
+            //如果不是Dev环境，则跳过；
+            sleep_wait_seconds = 1;
+        }
+    }
+
     @Autowired
     private DemoDubboService demoDubboService;
 
@@ -45,7 +56,7 @@ class BootDemoAppApplicationTest {
         Assert.assertTrue(Result.isSuccess(result));
     }
 
-    //    @Test
+    @Test
     public void testFetchOrderItemsTask() throws InterruptedException, ParseException {
         String[] ranges = {"2021-02-18:2021-02-20", "2021-01-24:2021-01-26", "2021-01-06:2021-01-08", "2020-12-17:2020-12-19"
                 , "2020-11-28:2020-11-30", "2020-10-18:2020-10-20", "2020-09-25:2020-09-27", "2020-09-18:2020-09-20"
@@ -54,32 +65,32 @@ class BootDemoAppApplicationTest {
         for (String dateRange : ranges) {
             fetchOrderItemsTask.fetchTokopedia(dateRange);
         }
-        TimeUnit.MINUTES.sleep(45L);
+        TimeUnit.SECONDS.sleep(sleep_wait_seconds);
         Assert.assertTrue(true);
     }
 
-    //    @Test
+    @Test
     public void testFetchFinanceItemsTask() throws InterruptedException {
-        ReturnT<String> returnT = fetchFinanceItemsTask.fetchTokopedia("2021-06-01:2021-07-01");
+        ReturnT<String> returnT = fetchFinanceItemsTask.fetchShopee("last7days");
         log.info(JSON.toJSONString(returnT));
         Assert.assertTrue(ReturnT.SUCCESS_CODE == returnT.getCode());
-        TimeUnit.MINUTES.sleep(45L);
+        TimeUnit.SECONDS.sleep(sleep_wait_seconds);
     }
 
-    //    @Test
+    @Test
     public void testFetchAmazonOrderItemsTask() throws InterruptedException {
         ReturnT<String> returnT = fetchOrderItemsTask.fetchAmazon("2021-07-13:2021-07-26");
         log.info(JSON.toJSONString(returnT));
         Assert.assertTrue(ReturnT.SUCCESS_CODE == returnT.getCode());
-        TimeUnit.MINUTES.sleep(5L);
+        TimeUnit.SECONDS.sleep(sleep_wait_seconds);
     }
 
     @SneakyThrows
     @Test
-    public void testFetchATokopediaOrderItemsTask() throws InterruptedException {
+    public void testFetchTokopediaOrderItemsTask() throws InterruptedException {
         ReturnT<String> returnT = fetchOrderItemsTask.fetchTokopedia("2020-01-01:2020-06-19");
         log.info(JSON.toJSONString(returnT));
         Assert.assertTrue(ReturnT.SUCCESS_CODE == returnT.getCode());
-        TimeUnit.MINUTES.sleep(60L);
+        TimeUnit.SECONDS.sleep(sleep_wait_seconds);
     }
 }
