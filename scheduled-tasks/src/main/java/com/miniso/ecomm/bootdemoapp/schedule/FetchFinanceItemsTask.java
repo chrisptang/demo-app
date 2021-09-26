@@ -4,15 +4,16 @@ import com.alibaba.fastjson.JSON;
 import com.miniso.boot.client.result.Result;
 import com.miniso.ecomm.apigateway.client.dto.ShopDTO;
 import com.miniso.ecomm.apigateway.client.dto.lazada.finance.TransactionDTO;
+import com.miniso.ecomm.apigateway.client.dto.shopee.payment.EscrowDTO;
 import com.miniso.ecomm.apigateway.client.dto.tokopedia.payment.PaymentDTO;
 import com.miniso.ecomm.apigateway.client.enums.PlatformEnum;
 import com.miniso.ecomm.apigateway.client.request.lazada.LazadaQueryTransactionDetailRequest;
 import com.miniso.ecomm.apigateway.client.request.shop.QueryShopPageRequest;
+import com.miniso.ecomm.apigateway.client.request.shopee.ShopeeEscrowListRequest;
 import com.miniso.ecomm.apigateway.client.request.tokopedia.TokopediaPaymentPageRequest;
 import com.miniso.ecomm.apigateway.client.services.ShopService;
-import com.miniso.ecomm.apigateway.client.services.amazon.AmazonOrderService;
 import com.miniso.ecomm.apigateway.client.services.lazada.LazadaPaymentService;
-import com.miniso.ecomm.apigateway.client.services.tokopedia.TokopediaOrderService;
+import com.miniso.ecomm.apigateway.client.services.shopee.ShopeePaymentService;
 import com.miniso.ecomm.apigateway.client.services.tokopedia.TokopediaPaymentService;
 import com.xxl.job.core.biz.model.ReturnT;
 import com.xxl.job.core.handler.annotation.XxlJob;
@@ -44,14 +45,11 @@ public class FetchFinanceItemsTask {
     @DubboReference(timeout = 60000)
     private LazadaPaymentService lazadaPaymentService;
 
-    @DubboReference
-    private TokopediaOrderService tokopediaOrderService;
-
     @DubboReference(timeout = 60000)
     private TokopediaPaymentService tokopediaPaymentService;
 
-    @DubboReference
-    private AmazonOrderService amazonOrderService;
+    @DubboReference(timeout = 60000)
+    private ShopeePaymentService shopeePaymentService;
 
     @Value("${tokopedia.payment.service.retry.interval:90}")
     private int retryInterval;
@@ -145,6 +143,50 @@ public class FetchFinanceItemsTask {
 
         return new ReturnT("scheduled success");
     }
+
+    @XxlJob("fetchFinanceShopee")
+    public ReturnT<String> fetchShopee(String dateRange) {
+        String[] range = getDateRange(dateRange);
+        final String finalFromDay = range[0];
+        final String finalToDay = range[1];
+        final int pageSize = 100;
+        log.warn("Fetch shopee raw Escrow-List data for:{} ~ {}", finalFromDay, finalToDay);
+
+        Date startDay = DateUtil.parseDate(finalFromDay);
+        Date endDate = DateUtil.parseDate(finalToDay);
+
+        while (startDay.before(endDate)) {
+            Date tempEndDate = DateUtil.addDays(startDay, 1);
+            final Date finalStartDay = startDay;
+            getShopsByPlatform(PlatformEnum.SHOPEE).forEach(shopDTO -> {
+                final long shopId = Long.parseLong(shopDTO.getAccount());
+                AtomicInteger pageCounter = new AtomicInteger(1);
+
+                ShopeeEscrowListRequest escrowListRequest = new ShopeeEscrowListRequest();
+                escrowListRequest.setPageSize(pageSize);
+                escrowListRequest.setPageNo(pageCounter.getAndIncrement());
+                escrowListRequest.setReleaseTimeFrom(finalStartDay.getTime() / 1000L);
+                escrowListRequest.setReleaseTimeFrom(tempEndDate.getTime() / 1000L);
+
+                Result<EscrowDTO> escrowDTOResult = shopeePaymentService.getEscrowList(shopId, escrowListRequest);
+                while (Result.isSuccess(escrowDTOResult)) {
+                    if (!Result.isNonEmptyResult(escrowDTOResult)) {
+                        log.warn("Fetch shopee raw Escrow-List task ended:{} ~ {}", escrowListRequest, escrowDTOResult);
+                        return;
+                    }
+                    log.warn("Fetch shopee raw Escrow-List task returned:{} : {}", shopId, escrowDTOResult.getData().getEscrowList().size());
+                    if (escrowDTOResult.getData().getMore() || escrowDTOResult.getData().getEscrowList().size() >= pageSize) {
+                        escrowListRequest.setPageNo(pageCounter.getAndIncrement());
+                        escrowDTOResult = shopeePaymentService.getEscrowList(shopId, escrowListRequest);
+                    }
+                }
+            });
+            startDay = tempEndDate;
+        }
+
+        return new ReturnT("scheduled success");
+    }
+
 
     private Result<PaymentDTO> getSaldoHistoryWithRetry(long shopId, TokopediaPaymentPageRequest paymentRequest, int retrying) {
         if (retrying <= 0) {
