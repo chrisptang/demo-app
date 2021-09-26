@@ -159,31 +159,33 @@ public class FetchFinanceItemsTask {
             Date tempEndDate = DateUtil.addDays(startDay, 1);
             final Date finalStartDay = startDay;
             getShopsByPlatform(PlatformEnum.SHOPEE).forEach(shopDTO -> {
-                final long shopId = Long.parseLong(shopDTO.getAccount());
-                AtomicInteger pageCounter = new AtomicInteger(1);
+                EXECUTOR_SERVICE.execute(() -> {
+                    final long shopId = Long.parseLong(shopDTO.getAccount());
+                    AtomicInteger pageCounter = new AtomicInteger(1);
 
-                ShopeeEscrowListRequest escrowListRequest = new ShopeeEscrowListRequest();
-                escrowListRequest.setPageSize(pageSize);
-                escrowListRequest.setPageNo(pageCounter.getAndIncrement());
-                escrowListRequest.setReleaseTimeFrom(finalStartDay.getTime() / 1000L);
-                escrowListRequest.setReleaseTimeTo(tempEndDate.getTime() / 1000L);
+                    ShopeeEscrowListRequest escrowListRequest = new ShopeeEscrowListRequest();
+                    escrowListRequest.setPageSize(pageSize);
+                    escrowListRequest.setPageNo(pageCounter.getAndIncrement());
+                    escrowListRequest.setReleaseTimeFrom(finalStartDay.getTime() / 1000L);
+                    escrowListRequest.setReleaseTimeTo(tempEndDate.getTime() / 1000L);
 
-                Result<EscrowDTO> escrowDTOResult = shopeePaymentService.getEscrowList(shopId, escrowListRequest);
-                while (Result.isSuccess(escrowDTOResult)) {
-                    if (!Result.isNonEmptyResult(escrowDTOResult)) {
-                        log.warn("Fetch shopee raw Escrow-List task ended:{} ~ {}", escrowListRequest, escrowDTOResult);
-                        return;
+                    Result<EscrowDTO> escrowDTOResult = shopeePaymentService.getEscrowList(shopId, escrowListRequest);
+                    while (Result.isSuccess(escrowDTOResult)) {
+                        if (!Result.isNonEmptyResult(escrowDTOResult)) {
+                            log.warn("Fetch shopee raw Escrow-List task ended:{} ~ {}", escrowListRequest, escrowDTOResult);
+                            return;
+                        }
+                        log.warn("Fetch shopee raw Escrow-List task returned:{} : {}", escrowListRequest, escrowDTOResult.getData().getEscrowList().size());
+                        if (escrowDTOResult.getData().getMore() || escrowDTOResult.getData().getEscrowList().size() >= pageSize) {
+                            escrowListRequest.setPageNo(pageCounter.getAndIncrement());
+                            escrowDTOResult = shopeePaymentService.getEscrowList(shopId, escrowListRequest);
+                        } else {
+                            log.warn("Fetch shopee raw Escrow-List task ended:{}", escrowListRequest);
+                            return;
+                        }
                     }
-                    log.warn("Fetch shopee raw Escrow-List task returned:{} : {}", escrowListRequest, escrowDTOResult.getData().getEscrowList().size());
-                    if (escrowDTOResult.getData().getMore() || escrowDTOResult.getData().getEscrowList().size() >= pageSize) {
-                        escrowListRequest.setPageNo(pageCounter.getAndIncrement());
-                        escrowDTOResult = shopeePaymentService.getEscrowList(shopId, escrowListRequest);
-                    } else {
-                        log.warn("Fetch shopee raw Escrow-List task ended:{}", escrowListRequest);
-                        return;
-                    }
-                }
-                log.warn("Fetch shopee raw Escrow-List task ended up with failed result:{}", escrowDTOResult);
+                    log.warn("Fetch shopee raw Escrow-List task ended up with failed result:{}", escrowDTOResult);
+                });
             });
             startDay = tempEndDate;
         }
