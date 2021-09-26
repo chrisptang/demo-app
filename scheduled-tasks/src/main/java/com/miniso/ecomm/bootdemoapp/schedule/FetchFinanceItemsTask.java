@@ -174,7 +174,7 @@ public class FetchFinanceItemsTask {
                         log.warn("Fetch shopee raw Escrow-List task ended:{} ~ {}", escrowListRequest, escrowDTOResult);
                         return;
                     }
-                    log.warn("Fetch shopee raw Escrow-List task returned:{} : {}", shopId, escrowDTOResult.getData().getEscrowList().size());
+                    log.warn("Fetch shopee raw Escrow-List task returned:{} : {}", escrowListRequest, escrowDTOResult.getData().getEscrowList().size());
                     if (escrowDTOResult.getData().getMore() || escrowDTOResult.getData().getEscrowList().size() >= pageSize) {
                         escrowListRequest.setPageNo(pageCounter.getAndIncrement());
                         escrowDTOResult = shopeePaymentService.getEscrowList(shopId, escrowListRequest);
