@@ -178,6 +178,9 @@ public class FetchFinanceItemsTask {
                     if (escrowDTOResult.getData().getMore() || escrowDTOResult.getData().getEscrowList().size() >= pageSize) {
                         escrowListRequest.setPageNo(pageCounter.getAndIncrement());
                         escrowDTOResult = shopeePaymentService.getEscrowList(shopId, escrowListRequest);
+                    } else {
+                        log.warn("Fetch shopee raw Escrow-List task ended:{}", escrowListRequest);
+                        return;
                     }
                 }
                 log.warn("Fetch shopee raw Escrow-List task ended up with failed result:{}", escrowDTOResult);
