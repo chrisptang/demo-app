@@ -43,6 +43,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import static com.miniso.ecomm.bootdemoapp.schedule.ParameterUtils.getDateRange;
+import static com.miniso.ecomm.bootdemoapp.schedule.ParameterUtils.getDateRangeObj;
 
 @Component
 @Slf4j
@@ -140,16 +141,12 @@ public class FetchOrderItemsTask {
 
     @XxlJob("fetchShopee")
     public ReturnT<String> fetchShopee(String dateRange) {
-        String[] range = getDateRange(dateRange);
-        final String finalFromDay = range[0];
-        final String finalToDay = range[1];
-        log.warn("Fetch shopee raw order-item data for:{} ~ {}", finalFromDay, finalToDay);
-
+        Date[] range = getDateRangeObj(dateRange);
+        log.warn("Fetch shopee raw order-item data for:{} ~ {}", range[0], range[1]);
 
         getShopsByPlatform(PlatformEnum.SHOPEE).forEach(shopDTO -> {
             final long shopId = Long.parseLong(shopDTO.getAccount());
-            Date startDay = DateUtil.parseDate(finalFromDay);
-            Date endDate = DateUtil.parseDate(finalToDay);
+            Date startDay = range[0], endDate = range[1];
 
             final AtomicLong financeCounter = new AtomicLong(0L);
 
