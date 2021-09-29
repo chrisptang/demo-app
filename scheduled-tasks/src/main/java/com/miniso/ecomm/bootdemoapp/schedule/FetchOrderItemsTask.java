@@ -274,14 +274,13 @@ public class FetchOrderItemsTask {
 
     @XxlJob("fetchAmazon")
     public ReturnT<String> fetchAmazon(String dateRange) {
-        final String[] range = getDateRange(dateRange);
-        final Date finalToDay = DateUtil.parseDate(range[1]);
+        final Date[] range = getDateRangeObj(dateRange);
         log.warn("Fetch amazon raw order-item data for:{} ~ {}", range[0], range[1]);
 
         final int secondsToWaitSeconds = 12 * 3600, queryReportIntervalSeconds = 20;
 
         getShopsByPlatform(PlatformEnum.AMAZON).forEach(shopDTO -> {
-            Date fromDay = DateUtil.parseDate(range[0]);
+            Date fromDay = range[0], finalToDay = range[1];
             while (fromDay.before(finalToDay)) {
                 Date tempEndDate = DateUtil.addDays(fromDay, 20);
                 if (tempEndDate.after(finalToDay)) {
@@ -293,8 +292,8 @@ public class FetchOrderItemsTask {
                     final AtomicInteger counter = new AtomicInteger(0);
                     AmazonOrderReportRequest amazonOrderReportRequest = new AmazonOrderReportRequest();
                     amazonOrderReportRequest.setSellingPartner(shopDTO.getAccount());
-                    amazonOrderReportRequest.setDataStartTime(SIMPLE_DATE_FORMAT.format(finalFromDay));
-                    amazonOrderReportRequest.setDataEndTime(SIMPLE_DATE_FORMAT.format(finalTempEndDate));
+                    amazonOrderReportRequest.setDataStartTime(ISO_DATE_FORMAT.format(finalFromDay));
+                    amazonOrderReportRequest.setDataEndTime(ISO_DATE_FORMAT.format(finalTempEndDate));
                     Result<AmazonReportDTO> orderReportResult = amazonOrderService.createOrderReport(amazonOrderReportRequest);
                     log.warn("amazon shop:{}, request:{}", shopDTO.getAccount(), JSON.toJSONString(amazonOrderReportRequest));
                     if (Result.isNonEmptyResult(orderReportResult)) {
