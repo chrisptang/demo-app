@@ -274,6 +274,7 @@ public class FetchOrderItemsTask {
 
     @XxlJob("fetchAmazon")
     public ReturnT<String> fetchAmazon(String dateRange) {
+        final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
         final Date[] range = getDateRangeObj(dateRange);
         log.warn("Fetch amazon raw order-item data for:{} ~ {}", range[0], range[1]);
 
@@ -292,8 +293,8 @@ public class FetchOrderItemsTask {
                     final AtomicInteger counter = new AtomicInteger(0);
                     AmazonOrderReportRequest amazonOrderReportRequest = new AmazonOrderReportRequest();
                     amazonOrderReportRequest.setSellingPartner(shopDTO.getAccount());
-                    amazonOrderReportRequest.setDataStartTime(ISO_DATE_FORMAT.format(finalFromDay));
-                    amazonOrderReportRequest.setDataEndTime(ISO_DATE_FORMAT.format(finalTempEndDate));
+                    amazonOrderReportRequest.setDataStartTime(simpleDateFormat.format(finalFromDay));
+                    amazonOrderReportRequest.setDataEndTime(simpleDateFormat.format(finalTempEndDate));
                     Result<AmazonReportDTO> orderReportResult = amazonOrderService.createOrderReport(amazonOrderReportRequest);
                     log.warn("amazon shop:{}, request:{}", shopDTO.getAccount(), JSON.toJSONString(amazonOrderReportRequest));
                     if (Result.isNonEmptyResult(orderReportResult)) {
