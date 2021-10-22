@@ -49,4 +49,15 @@ public class ParameterUtils {
 
         return new Date[]{fromDay, toDay};
     }
+
+    public static String[] getShopIds(String dateRange) {
+        if (org.apache.commons.lang3.StringUtils.isBlank(dateRange) || dateRange.indexOf(":") < 0) {
+            return null;
+        }
+        String[] args = dateRange.split(":");
+        if (args.length >= 3) {
+            return args[2].split(",");
+        }
+        return null;
+    }
 }

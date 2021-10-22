@@ -24,14 +24,17 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import static com.miniso.ecomm.bootdemoapp.schedule.ParameterUtils.getDateRange;
+import static com.miniso.ecomm.bootdemoapp.schedule.ParameterUtils.getShopIds;
 
 @Component
 @Slf4j
@@ -69,11 +72,13 @@ public class FetchFinanceItemsTask {
 
         final int limit = 500;
 
+        List<ShopDTO> shopDTOList = getShops(PlatformEnum.LAZADA, dateRange);
+
         while (startDay.before(endDate)) {
             Date tempEndDate = DateUtil.addHours(startDay, 24);
 
             Date finalStartDay = startDay;
-            getShopsByPlatform(PlatformEnum.LAZADA).forEach(shopDTO -> {
+            shopDTOList.forEach(shopDTO -> {
                 EXECUTOR_SERVICE.execute(() -> {
 
                     AtomicInteger counter = new AtomicInteger(0);
@@ -114,10 +119,12 @@ public class FetchFinanceItemsTask {
         Date startDay = DateUtil.parseDate(finalFromDay);
         Date endDate = DateUtil.parseDate(finalToDay);
 
+        List<ShopDTO> shopDTOList = getShops(PlatformEnum.TOKOPEDIA, dateRange);
+
         while (startDay.before(endDate)) {
             Date tempEndDate = DateUtil.addDays(startDay, 1);
             final Date finalStartDay = startDay;
-            getShopsByPlatform(PlatformEnum.TOKOPEDIA).forEach(shopDTO -> {
+            shopDTOList.forEach(shopDTO -> {
                 final long shopId = Long.parseLong(shopDTO.getAccount());
                 AtomicInteger pageCounter = new AtomicInteger(1);
 
@@ -155,10 +162,12 @@ public class FetchFinanceItemsTask {
         Date startDay = DateUtil.parseDate(finalFromDay);
         Date endDate = DateUtil.parseDate(finalToDay);
 
+        List<ShopDTO> shopDTOList = getShops(PlatformEnum.SHOPEE, dateRange);
+
         while (startDay.before(endDate)) {
             Date tempEndDate = DateUtil.addDays(startDay, 1);
             final Date finalStartDay = startDay;
-            getShopsByPlatform(PlatformEnum.SHOPEE).forEach(shopDTO -> {
+            shopDTOList.forEach(shopDTO -> {
                 EXECUTOR_SERVICE.execute(() -> {
                     final long shopId = Long.parseLong(shopDTO.getAccount());
                     AtomicInteger pageCounter = new AtomicInteger(1);
@@ -193,6 +202,18 @@ public class FetchFinanceItemsTask {
         return new ReturnT("scheduled success");
     }
 
+    private List<ShopDTO> getShops(PlatformEnum platformEnum, String taskArgs) {
+        List<ShopDTO> shopDTOS = getShopsByPlatform(platformEnum);
+        String[] shopAccounts = getShopIds(taskArgs);
+        if (null != shopAccounts && shopAccounts.length > 0) {
+            shopDTOS = Arrays.stream(shopAccounts).map(account -> {
+                ShopDTO shopDTO = new ShopDTO();
+                shopDTO.setAccount(account);
+                return shopDTO;
+            }).collect(Collectors.toList());
+        }
+        return shopDTOS;
+    }
 
     private Result<PaymentDTO> getSaldoHistoryWithRetry(long shopId, TokopediaPaymentPageRequest paymentRequest, int retrying) {
         if (retrying <= 0) {
