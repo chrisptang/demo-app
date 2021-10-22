@@ -42,8 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
-import static com.miniso.ecomm.bootdemoapp.schedule.ParameterUtils.getDateRange;
-import static com.miniso.ecomm.bootdemoapp.schedule.ParameterUtils.getDateRangeObj;
+import static com.miniso.ecomm.bootdemoapp.schedule.ParameterUtils.*;
 
 @Component
 @Slf4j
@@ -97,11 +96,13 @@ public class FetchOrderItemsTask {
         Date startDay = DateUtil.parseDate(finalFromDay);
         Date endDate = DateUtil.parseDate(finalToDay);
 
+        List<ShopDTO> shopDTOList = getShops(PlatformEnum.LAZADA, dateRange);
+
         while (startDay.before(endDate)) {
             Date tempEndDate = DateUtil.addHours(startDay, hourInterval);
             final String createdAfter = ISO_DATE_FORMAT.format(startDay);
             final String createdBefore = ISO_DATE_FORMAT.format(tempEndDate);
-            getShopsByPlatform(PlatformEnum.LAZADA).forEach(shopDTO -> {
+            shopDTOList.forEach(shopDTO -> {
                 EXECUTOR_SERVICE.execute(() -> {
                     AtomicInteger counter = new AtomicInteger(0);
                     LazadaQueryOrdersRequest ordersRequest = new LazadaQueryOrdersRequest();
@@ -144,7 +145,7 @@ public class FetchOrderItemsTask {
         Date[] range = getDateRangeObj(dateRange);
         log.warn("Fetch shopee raw order-item data for:{} ~ {}", range[0], range[1]);
 
-        getShopsByPlatform(PlatformEnum.SHOPEE).forEach(shopDTO -> {
+        getShops(PlatformEnum.SHOPEE, dateRange).forEach(shopDTO -> {
             final long shopId = Long.parseLong(shopDTO.getAccount());
             Date startDay = range[0], endDate = range[1];
 
@@ -216,7 +217,7 @@ public class FetchOrderItemsTask {
         Date startDay = DateUtil.parseDate(finalFromDay);
         Date endDate = DateUtil.parseDate(finalToDay);
 
-        for (ShopDTO shopDTO : getShopsByPlatform(PlatformEnum.TOKOPEDIA)) {
+        for (ShopDTO shopDTO : getShops(PlatformEnum.TOKOPEDIA, dateRange)) {
             log.warn("Fetch tokopedia raw order-item data for:{} ~ {}", finalFromDay, finalToDay);
             final long shopId = Long.parseLong(shopDTO.getAccount());
 
@@ -280,7 +281,9 @@ public class FetchOrderItemsTask {
 
         final int secondsToWaitSeconds = 12 * 3600, queryReportIntervalSeconds = 20;
 
-        getShopsByPlatform(PlatformEnum.AMAZON).forEach(shopDTO -> {
+        List<ShopDTO> shopDTOList = getShops(PlatformEnum.AMAZON, dateRange);
+
+        shopDTOList.forEach(shopDTO -> {
             Date fromDay = range[0], finalToDay = range[1];
             while (fromDay.before(finalToDay)) {
                 Date tempEndDate = DateUtil.addDays(fromDay, 20);
@@ -337,5 +340,18 @@ public class FetchOrderItemsTask {
         shopRequest.setPageSize(100);
 
         return shopService.getShopList(shopRequest).getData();
+    }
+
+    private List<ShopDTO> getShops(PlatformEnum platformEnum, String taskArgs) {
+        List<ShopDTO> shopDTOS = getShopsByPlatform(platformEnum);
+        String[] shopAccounts = getShopIds(taskArgs);
+        if (null != shopAccounts && shopAccounts.length > 0) {
+            shopDTOS = Arrays.stream(shopAccounts).map(account -> {
+                ShopDTO shopDTO = new ShopDTO();
+                shopDTO.setAccount(account);
+                return shopDTO;
+            }).collect(Collectors.toList());
+        }
+        return shopDTOS;
     }
 }
