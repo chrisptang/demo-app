@@ -113,25 +113,26 @@ public class FetchOrderItemsTask {
                     log.warn("Shop:{}, ordersRequest:{}", shopDTO.getAccount(), JSON.toJSONString(ordersRequest));
 
                     //先获取order；
-                    OrderPageDTO orderPageDTO = lazadaOrderService.listItems4RangeOfOrders(shopDTO.getAccount(), ordersRequest).getData();
-                    while (orderPageDTO != null) {
-                        if (CollectionUtils.isNotEmpty(orderPageDTO.getOrders())) {
+                    Result<OrderPageDTO> orderPageDTO = lazadaOrderService.listItems4RangeOfOrders(shopDTO.getAccount(), ordersRequest);
+                    while (Result.isNonEmptyResult(orderPageDTO)) {
+                        if (CollectionUtils.isNotEmpty(orderPageDTO.getData().getOrders())) {
                             log.warn("Shop:{}, total-orders:{}, running:{}",
-                                    shopDTO.getAccount(), orderPageDTO.getCountTotal(), ordersRequest.getOffset());
-                            counter.addAndGet(orderPageDTO.getOrders().size());
+                                    shopDTO.getAccount(), orderPageDTO.getData().getCountTotal(), ordersRequest.getOffset());
+                            counter.addAndGet(orderPageDTO.getData().getOrders().size());
                             //再根据order ID获取order-item：
-                            lazadaOrderService.getItemInfoOfOrders(shopDTO.getAccount(), orderPageDTO.getOrders().stream()
+                            lazadaOrderService.getItemInfoOfOrders(shopDTO.getAccount(), orderPageDTO.getData().getOrders().stream()
                                     .map(OrderDTO::getOrderId).collect(Collectors.toList()));
                             ordersRequest.setOffset(counter.get());
 
-                            if (orderPageDTO.getCountTotal() <= counter.get()) {
+                            if (orderPageDTO.getData().getCountTotal() <= counter.get()) {
                                 return;
                             }
-                            orderPageDTO = lazadaOrderService.listItems4RangeOfOrders(shopDTO.getAccount(), ordersRequest).getData();
+                            orderPageDTO = lazadaOrderService.listItems4RangeOfOrders(shopDTO.getAccount(), ordersRequest);
                         } else {
                             return;
                         }
                     }
+                    log.error("Shop:{}, ordersRequest:{}, return error:{}", shopDTO.getAccount(), JSON.toJSONString(ordersRequest), JSON.toJSONString(orderPageDTO));
                 });
             });
             startDay = tempEndDate;
