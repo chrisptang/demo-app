@@ -29,7 +29,9 @@ import com.xxl.job.core.handler.annotation.XxlJob;
 import com.xxl.job.core.util.DateUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.time.DateUtils;
 import org.apache.dubbo.config.annotation.DubboReference;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.text.ParseException;
@@ -70,6 +72,9 @@ public class FetchOrderItemsTask {
     @DubboReference
     private ShopeePaymentService shopeePaymentService;
 
+    @Value("${lazada.order.batch.size:100}")
+    private int lazadaOrderBatchSize;
+
     private static final ExecutorService EXECUTOR_SERVICE = Executors.newFixedThreadPool(5);
 
     private static final ExecutorService EXECUTOR_SERVICE_SHOPEE_FINANCE = new ThreadPoolExecutor(10, 10, 0
@@ -86,15 +91,17 @@ public class FetchOrderItemsTask {
     }
 
     public ReturnT<String> fetchLazadaBiz(String dateRange, int hourInterval) {
+
         hourInterval = Math.max(Math.min(24, hourInterval), 1);
         String[] range = getDateRange(dateRange);
         final String finalFromDay = range[0];
         final String finalToDay = range[1];
-        log.warn("Fetch lazada raw order-item data for:{} ~ {}", finalFromDay, finalToDay);
-
 
         Date startDay = DateUtil.parseDate(finalFromDay);
         Date endDate = DateUtil.parseDate(finalToDay);
+        endDate = DateUtils.addMilliseconds(endDate, (int) (TimeUnit.DAYS.toMillis(1L) - 1));
+
+        log.warn("Fetch lazada raw order-item data for:{} ~ {}, hourInterval:{}", startDay, endDate, hourInterval);
 
         List<ShopDTO> shopDTOList = getShops(PlatformEnum.LAZADA, dateRange);
 
@@ -109,11 +116,14 @@ public class FetchOrderItemsTask {
                     ordersRequest.setCreatedAfter(createdAfter);
                     ordersRequest.setCreatedBefore(createdBefore);
                     ordersRequest.setOffset(0);
+                    ordersRequest.setLimit(lazadaOrderBatchSize);
+                    Thread.currentThread().setName(String.format("%s:%s~%s", shopDTO.getAccount(), createdAfter, createdBefore));
 
                     log.warn("Shop:{}, ordersRequest:{}", shopDTO.getAccount(), JSON.toJSONString(ordersRequest));
 
                     //先获取order；
                     Result<OrderPageDTO> orderPageDTO = lazadaOrderService.listItems4RangeOfOrders(shopDTO.getAccount(), ordersRequest);
+                    final int totalOrders = orderPageDTO.getData().getCountTotal();
                     while (Result.isNonEmptyResult(orderPageDTO)) {
                         if (CollectionUtils.isNotEmpty(orderPageDTO.getData().getOrders())) {
                             log.warn("Shop:{}, total-orders:{}, running:{}",
@@ -124,11 +134,13 @@ public class FetchOrderItemsTask {
                                     .map(OrderDTO::getOrderId).collect(Collectors.toList()));
                             ordersRequest.setOffset(counter.get());
 
-                            if (orderPageDTO.getData().getCountTotal() <= counter.get()) {
+                            if (ordersRequest.getOffset() >= totalOrders) {
+                                log.warn("Reached end:{}", JSON.toJSONString(ordersRequest));
                                 return;
                             }
                             orderPageDTO = lazadaOrderService.listItems4RangeOfOrders(shopDTO.getAccount(), ordersRequest);
                         } else {
+                            log.warn("Reached end:{}", JSON.toJSONString(orderPageDTO));
                             return;
                         }
                     }
