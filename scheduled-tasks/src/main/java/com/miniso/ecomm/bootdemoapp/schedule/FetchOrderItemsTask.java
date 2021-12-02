@@ -160,13 +160,12 @@ public class FetchOrderItemsTask {
 
         getShops(PlatformEnum.SHOPEE, dateRange).forEach(shopDTO -> {
             final long shopId = Long.parseLong(shopDTO.getAccount());
-            Date startDay = range[0], endDate = range[1];
+            long startDay = range[0].getTime() / 1000L, endDate = range[1].getTime() / 1000L;
 
             final AtomicLong financeCounter = new AtomicLong(0L);
 
-            while (startDay.before(endDate)) {
-                Date tempEndDate = DateUtil.addHours(startDay, 12);
-                final long fromTime = startDay.getTime() / 1000L, toTime = tempEndDate.getTime() / 1000L;
+            while (startDay < endDate) {
+                final long fromTime = startDay, toTime = startDay + TimeUnit.HOURS.toSeconds(12L);
                 EXECUTOR_SERVICE.execute(() -> {
                     ShopeeOrderRequest request = new ShopeeOrderRequest();
                     request.setPageSize(50);
@@ -214,7 +213,7 @@ public class FetchOrderItemsTask {
                     }
                 });
 
-                startDay = tempEndDate;
+                startDay = toTime;
             }
         });
 
