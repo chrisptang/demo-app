@@ -73,7 +73,7 @@ public class DemoController {
         try (BufferedReader reader = new BufferedReader(new FileReader(tempRootPath + "/" + file))) {
             String line = reader.readLine();
             AtomicInteger counter = new AtomicInteger(0);
-            while (null != line) {
+            while (null != (line = reader.readLine())) {
                 counter.incrementAndGet();
                 if (line.equalsIgnoreCase("shop_id,order_id,cnt")) {
                     log.warn("this is the header:" + line);
@@ -102,9 +102,9 @@ public class DemoController {
             @RequestParam(required = false, defaultValue = "tokopedia-no-payment-info-orders.csv") String file)
             throws IOException {
         try (BufferedReader reader = new BufferedReader(new FileReader(tempRootPath + "/" + file))) {
-            String line = reader.readLine();
+            String line = null;
             AtomicInteger counter = new AtomicInteger(0);
-            while (null != line) {
+            while (null != (line = reader.readLine())) {
                 counter.incrementAndGet();
                 if (line.equalsIgnoreCase("shop_id,order_id,cnt")) {
                     log.warn("this is the header:" + line);
