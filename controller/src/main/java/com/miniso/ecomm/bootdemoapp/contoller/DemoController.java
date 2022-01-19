@@ -1,5 +1,8 @@
 package com.miniso.ecomm.bootdemoapp.contoller;
 
+import com.alibaba.fastjson.JSON;
+import com.miniso.boot.client.result.Result;
+import com.miniso.ecomm.apigateway.client.dto.tokopedia.order.OrderItemDTO;
 import com.miniso.ecomm.apigateway.client.services.lazada.LazadaOrderService;
 import com.miniso.ecomm.apigateway.client.services.tokopedia.TokopediaOrderService;
 import com.miniso.ecomm.bootdemoapp.schedule.FetchOrderItemsTask;
@@ -19,14 +22,13 @@ import javax.servlet.http.HttpServletRequest;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/demo")
@@ -96,6 +98,7 @@ public class DemoController {
     private static final ExecutorService TOKOPEDIA_EXECUTOR = new ThreadPoolExecutor(5, 5, 0,
             TimeUnit.SECONDS, new LinkedBlockingQueue<>(2000), new ThreadPoolExecutor.CallerRunsPolicy());
 
+    private static final Random RANDOM = new Random();
 
     @PostMapping("/order/tokopedia")
     public ResponseEntity<String> tokopediaFetchOrderLevel(
@@ -116,7 +119,17 @@ public class DemoController {
                     continue;
                 }
                 TOKOPEDIA_EXECUTOR.execute(() -> {
-                    tokopediaOrderService.getSingleOrder(Long.parseLong(params[0]), Long.parseLong(params[1]));
+                    Result<OrderItemDTO> orderItemDTOResult = tokopediaOrderService.getSingleOrder(Long.parseLong(params[0]), Long.parseLong(params[1]));
+                    if (Result.isFailed(orderItemDTOResult)) {
+                        // 重试一次；
+                        try {
+                            TimeUnit.SECONDS.sleep((20 + RANDOM.nextInt(20)));
+                            orderItemDTOResult = tokopediaOrderService.getSingleOrder(Long.parseLong(params[0]), Long.parseLong(params[1]));
+                            log.warn("retry result:" + JSON.toJSONString(orderItemDTOResult));
+                        } catch (InterruptedException e) {
+                            log.error("error with line:" + Arrays.asList(params).stream().collect(Collectors.joining(",")), e);
+                        }
+                    }
                 });
             }
             return ResponseEntity.ok("OK, lines:" + counter.get());
