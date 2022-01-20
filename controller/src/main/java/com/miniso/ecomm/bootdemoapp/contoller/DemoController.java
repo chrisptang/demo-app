@@ -95,7 +95,7 @@ public class DemoController {
     }
 
 
-    private static final ExecutorService TOKOPEDIA_EXECUTOR = new ThreadPoolExecutor(5, 5, 0,
+    private static final ExecutorService TOKOPEDIA_EXECUTOR = new ThreadPoolExecutor(2, 2, 0,
             TimeUnit.SECONDS, new LinkedBlockingQueue<>(2000), new ThreadPoolExecutor.CallerRunsPolicy());
 
     private static final Random RANDOM = new Random();
@@ -123,6 +123,7 @@ public class DemoController {
                     if (Result.isFailed(orderItemDTOResult)) {
                         // 重试一次；
                         try {
+                            log.warn("retrying...:" + counter.get());
                             TimeUnit.SECONDS.sleep((20 + RANDOM.nextInt(20)));
                             orderItemDTOResult = tokopediaOrderService.getSingleOrder(Long.parseLong(params[0]), Long.parseLong(params[1]));
                             log.warn("retry result:" + JSON.toJSONString(orderItemDTOResult));
